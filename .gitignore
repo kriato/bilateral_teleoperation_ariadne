@@ -1,0 +1,10 @@
+# hidden folders
+.vscode
+
+# folders
+build
+pHRI-project
+
+# files
+*.png
+*.pdf
