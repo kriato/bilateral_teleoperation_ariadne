@@ -15,6 +15,29 @@ void print(T in, bool newline = true)
 		std::cout << in;
 }
 
+Ariadne::HybridAutomaton CommunicationChannel()
+{
+	Ariadne::RealVariable position_master("qm");
+	Ariadne::RealVariable velocity_master("qm_dot");
+	Ariadne::RealVariable position_slave("qs");
+	Ariadne::RealVariable velocity_slave("qs_dot");
+	
+	Ariadne::RealVariable position_master_m2s("qm_m2s");
+	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
+	Ariadne::RealVariable position_slave_s2m("qs_s2m");
+	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
+
+	Ariadne::HybridAutomaton comm("comm_channel");
+	Ariadne::DiscreteLocation loc;
+
+	comm.new_mode(loc, Ariadne::let(
+		{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m}) = 
+		{position_master, velocity_master, position_slave, velocity_slave}
+		);
+
+	return comm;
+}
+
 Ariadne::HybridAutomaton Environment()
 {	
 
@@ -27,9 +50,9 @@ Ariadne::HybridAutomaton Environment()
 	Ariadne::RealVariable env_force("fe");
 
 	Ariadne::HybridAutomaton env("env");
-	Ariadne::DiscreteLocation flow;
+	Ariadne::DiscreteLocation loc;
 
-	env.new_mode(flow, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
+	env.new_mode(loc, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
 
 	return env;
 }
@@ -41,14 +64,14 @@ Ariadne::HybridAutomaton TLM()
 	
 	Ariadne::RealVariable position_master("qm");
 	Ariadne::RealVariable velocity_master("qm_dot");
-	Ariadne::RealVariable position_slave("qs");
-	Ariadne::RealVariable velocity_slave("qs_dot");
+	Ariadne::RealVariable position_slave_s2m("qs_s2m");
+	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
 	Ariadne::RealVariable torque("tau_m");
 
 	Ariadne::HybridAutomaton tlm("tlm");
-	Ariadne::DiscreteLocation flow;
+	Ariadne::DiscreteLocation loc;
 
-	tlm.new_mode(flow, Ariadne::let({torque}) = {(position_master - position_slave) * P + (velocity_master - velocity_slave) * D});
+	tlm.new_mode(loc, Ariadne::let({torque}) = {(position_master - position_slave_s2m) * P + (velocity_master - velocity_slave_s2m) * D});
 
 	return tlm;
 }
@@ -58,17 +81,17 @@ Ariadne::HybridAutomaton TLS()
 	Ariadne::RealConstant P("P", PS);
 	Ariadne::RealConstant D("D", DS);
 	
-	Ariadne::RealVariable position_master("qm");
-	Ariadne::RealVariable velocity_master("qm_dot");
+	Ariadne::RealVariable position_master_m2s("qm_m2s");
+	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
 	Ariadne::RealVariable position_slave("qs");
 	Ariadne::RealVariable velocity_slave("qs_dot");
 	Ariadne::RealVariable torque("tau_s");
 
 	Ariadne::HybridAutomaton tls("tls");
 
-	Ariadne::DiscreteLocation flow;
+	Ariadne::DiscreteLocation loc;
 
-	tls.new_mode(flow, Ariadne::let({torque}) = {(position_master - position_slave) * P + (velocity_master - velocity_slave) * D});
+	tls.new_mode(loc, Ariadne::let({torque}) = {(position_master_m2s - position_slave) * P + (velocity_master_m2s - velocity_slave) * D});
 
 	return tls;
 }
@@ -90,9 +113,9 @@ Ariadne::HybridAutomaton Master()
 	Ariadne::RealVariable human_force("h_m_star");
 
 	Ariadne::HybridAutomaton master("master");
-	Ariadne::DiscreteLocation flow;
+	Ariadne::DiscreteLocation loc;
 																												  // accelerazione
-	master.new_mode(flow, Ariadne::dot({velocity_master, position_master}) = {((torque - ((velocity_master * Bh + velocity_master * Jh) - human_force) * arm) * t2c * c2v) / (J + B), velocity_master});
+	master.new_mode(loc, Ariadne::dot({velocity_master, position_master}) = {((torque - ((velocity_master * Bh + velocity_master * Jh) - human_force) * arm) * t2c * c2v) / (J + B), velocity_master});
 
 	return master;
 }
@@ -112,9 +135,9 @@ Ariadne::HybridAutomaton Slave()
 	Ariadne::RealVariable velocity_slave("qs_dot");
 
 	Ariadne::HybridAutomaton slave("slave");
-	Ariadne::DiscreteLocation flow;
+	Ariadne::DiscreteLocation loc;
 
-	slave.new_mode(flow, Ariadne::dot({velocity_slave, position_slave}) = {((torque - (env_force * arm)) * t2c * c2v) / (J + B), velocity_slave});
+	slave.new_mode(loc, Ariadne::dot({velocity_slave, position_slave}) = {((torque - (env_force * arm)) * t2c * c2v) / (J + B), velocity_slave});
 
 	return slave;
 }
@@ -126,14 +149,14 @@ Ariadne::HybridAutomaton Operator()
 	
 	Ariadne::RealVariable position_ref("qm_ref");
 	Ariadne::RealVariable velocity_ref("qm_dot_ref");
-	Ariadne::RealVariable position_slave("qs");
-	Ariadne::RealVariable velocity_slave("qs_dot");
+	Ariadne::RealVariable position_slave_s2m("qs_s2m");
+	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
 	Ariadne::RealVariable human_force("h_m_star");
 
 	Ariadne::HybridAutomaton operator_("human_operator");
-	Ariadne::DiscreteLocation flow;
+	Ariadne::DiscreteLocation loc;
 
-	operator_.new_mode(flow, Ariadne::let({human_force}) = {(position_ref - position_slave) * P + (velocity_ref - velocity_slave) * D});
+	operator_.new_mode(loc, Ariadne::let({human_force}) = {(position_ref - position_slave_s2m) * P + (velocity_ref - velocity_slave_s2m) * D});
 
 	return operator_;
 }
@@ -148,14 +171,14 @@ Ariadne::HybridAutomaton HumanIntention()
 	Ariadne::RealVariable t("t");
 
 	Ariadne::HybridAutomaton intention("human_intention");
-	Ariadne::DiscreteLocation flow;
+	Ariadne::DiscreteLocation loc;
 
-	intention.new_mode(flow, Ariadne::dot({velocity_ref, position_ref,t}) = {1, velocity_ref,1});
-	// intention.new_mode(flow, Ariadne::dot({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
-	// intention.new_mode(flow, Ariadne::let({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
-	// intention.new_mode(flow, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
+	intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {1, velocity_ref,1});
+	// intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
+	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
+	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
 
-	// intention.new_mode(flow, Ariadne::dot({t}) = {1});
+	// intention.new_mode(loc, Ariadne::dot({t}) = {1});
 	return intention;
 }
 
@@ -169,6 +192,11 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable velocity_slave("qs_dot");
 	Ariadne::RealVariable torque_s("tau_s");
 	
+	Ariadne::RealVariable position_master_m2s("qm_m2s");
+	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
+	Ariadne::RealVariable position_slave_s2m("qs_s2m");
+	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
+
 	Ariadne::RealVariable position_ref("qm_ref");
 	Ariadne::RealVariable velocity_ref("qm_dot_ref");
 	Ariadne::RealVariable human_force("h_m_star");
@@ -226,7 +254,8 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 			Master(),
 			TLM(),
 			TLS(),
-			Environment()
+			Environment(),
+			CommunicationChannel()
 		});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
