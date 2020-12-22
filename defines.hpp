@@ -8,10 +8,10 @@
 #define BE 0.5
 
 // OPERATOR
-#define PO 1.2
-#define DO 1
+#define PO 0.1
+#define DO 0.1
 #define FREQ 1
-#define AMP 1
+#define AMP 2
 
 // SLAVE
 #define ARM_S 0.1

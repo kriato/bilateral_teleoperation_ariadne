@@ -15,6 +15,8 @@ void print(T in, bool newline = true)
 		std::cout << in;
 }
 
+
+
 Ariadne::HybridAutomaton CommunicationChannel()
 {
 	Ariadne::RealVariable position_master("qm");
@@ -115,7 +117,7 @@ Ariadne::HybridAutomaton Master()
 	Ariadne::HybridAutomaton master("master");
 	Ariadne::DiscreteLocation loc;
 																												  // accelerazione
-	master.new_mode(loc, Ariadne::dot({velocity_master, position_master}) = {((torque - ((velocity_master * Bh + velocity_master * Jh) - human_force) * arm) * t2c * c2v) / (J + B), velocity_master});
+	master.new_mode(loc, Ariadne::dot({velocity_master, position_master}) = {((torque - ((velocity_master * Bh + velocity_master * Jh) - human_force) * arm) * t2c * c2v) / (J), velocity_master});
 
 	return master;
 }
@@ -137,7 +139,7 @@ Ariadne::HybridAutomaton Slave()
 	Ariadne::HybridAutomaton slave("slave");
 	Ariadne::DiscreteLocation loc;
 
-	slave.new_mode(loc, Ariadne::dot({velocity_slave, position_slave}) = {((torque - (env_force * arm)) * t2c * c2v) / (J + B), velocity_slave});
+	slave.new_mode(loc, Ariadne::dot({velocity_slave, position_slave}) = {((torque - (env_force * arm)) * t2c * c2v) + B * velocity_slave / (J), velocity_slave});
 
 	return slave;
 }
@@ -173,10 +175,10 @@ Ariadne::HybridAutomaton HumanIntention()
 	Ariadne::HybridAutomaton intention("human_intention");
 	Ariadne::DiscreteLocation loc;
 
-	intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {1, velocity_ref,1});
-	// intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
+	//intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {1, velocity_ref,1});
+	// intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), amp * cos(2*PI*t*freq),1});
 	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
-	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
+	intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
 
 	// intention.new_mode(loc, Ariadne::dot({t}) = {1});
 	return intention;
