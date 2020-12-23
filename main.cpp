@@ -102,9 +102,7 @@ Ariadne::HybridAutomaton Master()
 {
 	Ariadne::RealConstant J("J", Ariadne::Decimal(JM));
 	Ariadne::RealConstant B("B", Ariadne::Decimal(BM));
-	Ariadne::RealConstant Bh("Bh", Ariadne::Decimal(BhM));
-	Ariadne::RealConstant Jh("Jh", Ariadne::Decimal(JhM));
-	// is this the same as _decimal?
+	
 	Ariadne::RealConstant arm("arm_m", Ariadne::Decimal(ARM_M));
 	Ariadne::RealConstant t2c("Kt2c_m", Ariadne::Decimal(KT2CM));
 	Ariadne::RealConstant c2v("Kc2v_m", Ariadne::Decimal(KC2VM));
@@ -116,8 +114,14 @@ Ariadne::HybridAutomaton Master()
 
 	Ariadne::HybridAutomaton master("master");
 	Ariadne::DiscreteLocation loc;
-																												  // accelerazione
-	master.new_mode(loc, Ariadne::dot({velocity_master, position_master}) = {((torque - ((velocity_master * Bh + velocity_master * Jh) - human_force) * arm) * t2c * c2v) / (J), velocity_master});
+
+	Ariadne::RealExpression delta_t = Ariadne::Decimal(0.01); 
+	Ariadne::RealExpression acc = (torque + (human_force * arm)) / J; 
+	Ariadne::RealExpression vel = acc * delta_t; 
+	Ariadne::RealExpression pos = vel * delta_t; 
+																												  
+	master.new_mode(loc, Ariadne::let({velocity_master, position_master}) = {vel, pos});
+
 
 	return master;
 }
@@ -139,9 +143,15 @@ Ariadne::HybridAutomaton Slave()
 	Ariadne::HybridAutomaton slave("slave");
 	Ariadne::DiscreteLocation loc;
 
-	slave.new_mode(loc, Ariadne::dot({velocity_slave, position_slave}) = {((torque - (env_force * arm)) * t2c * c2v) + B * velocity_slave / (J), velocity_slave});
+	Ariadne::RealExpression delta_t = Ariadne::Decimal(0.01); 
+	Ariadne::RealExpression acc = (torque - (env_force * arm)) / J; 
+	Ariadne::RealExpression vel = acc * delta_t; 
+	Ariadne::RealExpression pos = vel * delta_t; 
 
+	slave.new_mode(loc, Ariadne::let({velocity_slave, position_slave}) = {vel, pos});
+	//slave.new_mode(loc, Ariadne::dot({velocity_slave, position_slave}) = {acc, velocity_slave});
 	return slave;
+
 }
 
 Ariadne::HybridAutomaton Operator()
@@ -180,7 +190,7 @@ Ariadne::HybridAutomaton HumanIntention()
 	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
 	intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
 
-	// intention.new_mode(loc, Ariadne::dot({t}) = {1});
+	// intention.new_mode(loc, Ariadne::dot({t}) = {1}); 
 	return intention;
 }
 
@@ -204,6 +214,7 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable human_force("h_m_star");
 	
 	Ariadne::RealVariable env_force("fe");
+	Ariadne::RealVariable t("t");
 
 	Ariadne::HybridSimulator simulator;
 	simulator.set_step_size(0.01);
@@ -220,7 +231,13 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 		position_ref=0, 
 		velocity_ref=0,
 		human_force=0,
-		env_force=0
+		env_force=0,
+		position_master_m2s = 0,
+		velocity_master_m2s = 0,
+		position_slave_s2m = 0,
+		velocity_slave_s2m = 0,
+		t = 0
+
 	});
 
 	Ariadne::Int tf_c = TF_CONTINUOUS;
@@ -241,6 +258,7 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	plot("master_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_master<=ymax),orbit);
 	plot("slave_pos",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_slave<=ymax),orbit);
 	plot("slave_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_slave<=ymax),orbit);
+	plot("t",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, 0<=t<=5),orbit);
 	std::cout << "done!\n" << std::endl;
 }
 

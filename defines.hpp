@@ -3,13 +3,13 @@
 #define PI Ariadne::pi
 
 // ENVIRONMENT
-#define QE 0.01
+#define QE 5
 #define KE 10.0
 #define BE 0.5
 
 // OPERATOR
-#define PO 0.1
-#define DO 0.1
+#define PO 1
+#define DO 1
 #define FREQ 1
 #define AMP 2
 
