@@ -130,6 +130,9 @@ Ariadne::HybridAutomaton CommunicationChannel()
 	return comm;
 }
 
+// Mimic the overriden operator outside the namespace 
+Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(Ariadne::StringVariable base, std::string location) {{ using namespace Ariadne; return base|location;};}
+
 Ariadne::HybridAutomaton Environment()
 {	
 	Ariadne::RealConstant position_env("qe", Ariadne::Decimal(QE));
@@ -140,12 +143,27 @@ Ariadne::HybridAutomaton Environment()
 	Ariadne::RealVariable velocity_slave("qs_dot");
 	Ariadne::RealVariable env_force("fe");
 
-	Ariadne::HybridAutomaton env("env");
-	Ariadne::DiscreteLocation loc;
+	Ariadne::StringVariable env_name("env");
+	Ariadne::HybridAutomaton env(env_name.name());
+	Ariadne::DiscreteLocation free_motion(getPair(env_name,"free_motion"));
+	Ariadne::DiscreteLocation contact(getPair(env_name,"contact"));
 
-	// TWO STATE: FREE MOTION VS FORCE FEEDBACK
-	env.new_mode(loc, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
-	env.new_mode(loc, Ariadne::let({env_force}) = {0});
+	Ariadne::DiscreteEvent no_force("no_force");
+	Ariadne::DiscreteEvent force("force");
+	Ariadne::DiscreteEvent no_force_inv("no_force_inv");
+	Ariadne::DiscreteEvent force_inv("force_inv");
+
+	env.new_mode(free_motion, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
+	env.new_mode(contact, Ariadne::let({env_force}) = {0});
+
+	// ADD DELTA?
+	Ariadne::RealConstant delta("delta", Ariadne::Decimal(0.01));
+
+	env.new_invariant(free_motion, position_slave >= position_env, force_inv);
+	env.new_invariant(contact, position_slave <= position_env, no_force_inv);
+
+	env.new_transition(free_motion, force, contact, position_slave <= position_env, Ariadne::EventKind::PERMISSIVE);
+	env.new_transition(contact, no_force, free_motion, position_slave >= position_env, Ariadne::EventKind::PERMISSIVE);
 	
 	return env;
 }
@@ -268,11 +286,11 @@ Ariadne::HybridAutomaton HumanIntention()
 
 	Ariadne::HybridAutomaton intention("human_intention");
 	Ariadne::DiscreteLocation loc;
-
+	
 	// intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {1, velocity_ref,1});
-	// intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref, t}) = {-amp * sin(2*PI*t*freq), velocity_ref, 1});
+	intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref, t}) = {amp*2*PI*freq*cos(2*PI*t*freq), velocity_ref, 1});
 	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
-	intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
+	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
 	
 	return intention;
 }
@@ -364,7 +382,7 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 		});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
-	// std::cout << "\nSystem:\n\n" << system << std::endl;
+	std::cout << "\nSystem:\n\n" << system << std::endl;
 	simulate_evolution(system,log_verbosity);
 
 	return 0;

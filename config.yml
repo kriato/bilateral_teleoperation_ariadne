@@ -1,7 +1,7 @@
 # ENVIRONMENT
 QE: 5
-KE: 0
-BE: 0
+KE: 10.0
+BE: 0.5
 
 # OPERATOR
 PO: 1
@@ -17,8 +17,8 @@ BhS: 0.02 #???
 JhS: 0.02 #???
 KT2CS: 1.182
 KC2VS: 2.0
-PS: 1
-DS: 1
+PS: 3
+DS: 1.5
 
 # MASTER
 ARM_M: 0.1
