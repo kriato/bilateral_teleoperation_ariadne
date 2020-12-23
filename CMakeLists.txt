@@ -1,5 +1,6 @@
 # Preferable to avoid warnings during execution
 cmake_minimum_required(VERSION 3.9)
+project("Bilateral Teleoperation Ariadne")
 
 # Set to search the root source directory for the FindAriadne.cmake module
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
@@ -16,8 +17,11 @@ find_package(Ariadne REQUIRED)
 # Add the Ariadne headers to the includes
 include_directories(SYSTEM ${ARIADNE_INCLUDE_DIRS})
 
+# DEPS
+add_subdirectory(deps/yaml-cpp yaml-cpp)
+
 # Set the executable along with the required source files
-add_executable(main main.cpp defines.hpp)
+add_executable(main main.cpp defines.hpp deps/yaml-cpp/include/yaml-cpp/yaml.h)
 
 # Instruct to link against the ariadne library
-target_link_libraries(main ${ARIADNE_LIBRARIES})
+target_link_libraries(main ${ARIADNE_LIBRARIES} yaml-cpp)

@@ -1,0 +1,42 @@
+# ENVIRONMENT
+QE: 5
+KE: 0
+BE: 0
+
+# OPERATOR
+PO: 1
+DO: 1
+FREQ: 1
+AMP: 2
+
+# SLAVE
+ARM_S: 0.1
+JS: 0.0629
+BS: 0.0517
+BhS: 0.02 #???
+JhS: 0.02 #???
+KT2CS: 1.182
+KC2VS: 2.0
+PS: 1
+DS: 1
+
+# MASTER
+ARM_M: 0.1
+JM: 0.0629
+BM: 0.0517 
+BhM: 0.02 #???
+JhM: 0.02 #???
+KT2CM: 1.182
+KC2VM: 2.0
+PM: 1
+DM: 1
+
+# SIMULATION
+TF_CONTINUOUS: 5
+TF_DISCRETE: 5
+
+# PLOTS
+Y_MIN: -2
+Y_MAX: 2
+
+DEBUG: False
