@@ -40,7 +40,7 @@ void print(T in, bool newline = true)
 		PO = config["PO"].as<double>();
 		DO = config["DO"].as<double>(); 
 		FREQ = config["FREQ"].as<double>(); 
-		AMP = config["AMP"].as<double>(); 
+		AMP = config["AMP"].as<double>(); 	
 		ARM_S = config["ARM_S"].as<double>();
 		JS = config["JS"].as<double>(); 
 		BS = config["BS"].as<double>(); 
@@ -107,6 +107,10 @@ void print(T in, bool newline = true)
 	#include "defines.hpp"
 #endif
 
+// Mimic the overriden operator outside the namespace 
+Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(Ariadne::StringVariable base, std::string location) {{ using namespace Ariadne; return base|location;};}
+Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(std::string base, std::string location) {{ using namespace Ariadne; return Ariadne::StringVariable("base")|Ariadne::StringConstant(location);};}
+
 Ariadne::HybridAutomaton CommunicationChannel()
 {
 	Ariadne::RealVariable position_master("qm");
@@ -129,9 +133,6 @@ Ariadne::HybridAutomaton CommunicationChannel()
 
 	return comm;
 }
-
-// Mimic the overriden operator outside the namespace 
-Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(Ariadne::StringVariable base, std::string location) {{ using namespace Ariadne; return base|location;};}
 
 Ariadne::HybridAutomaton Environment()
 {	
@@ -156,14 +157,14 @@ Ariadne::HybridAutomaton Environment()
 	env.new_mode(free_motion, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
 	env.new_mode(contact, Ariadne::let({env_force}) = {0});
 
-	// ADD DELTA?
 	Ariadne::RealConstant delta("delta", Ariadne::Decimal(0.01));
 
-	env.new_invariant(free_motion, position_slave >= position_env, force_inv);
-	env.new_invariant(contact, position_slave <= position_env, no_force_inv);
+	// TODO ?
+	// env.new_invariant(free_motion, position_slave >= position_env, force_inv);
+	// env.new_invariant(contact, position_env < position_slave, no_force_inv);
 
-	env.new_transition(free_motion, force, contact, position_slave <= position_env, Ariadne::EventKind::PERMISSIVE);
-	env.new_transition(contact, no_force, free_motion, position_slave >= position_env, Ariadne::EventKind::PERMISSIVE);
+	env.new_transition(free_motion, force, contact, position_env <= position_slave + delta, Ariadne::EventKind::URGENT);
+	env.new_transition(contact, no_force, free_motion, position_env >= position_slave - delta, Ariadne::EventKind::URGENT);
 	
 	return env;
 }
@@ -321,16 +322,20 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	simulator.set_step_size(0.01);
 	simulator.verbosity = log_verbosity;
 
-	Ariadne::HybridRealPoint initial_point({},
-	{
-		position_master=0, 
-		velocity_master=0,
-		position_slave=0,
-		velocity_slave=0,
-		position_ref=0,
-		velocity_ref=0, 
-		t = 0
-	});
+	Ariadne::HybridRealPoint initial_point(
+		{
+			getPair("env","free_motion")
+		},
+		{
+			position_master=0, 
+			velocity_master=0,
+			position_slave=0,
+			velocity_slave=0,
+			position_ref=0,
+			velocity_ref=0, 
+			t = 0
+		}
+	);
 
 	Ariadne::Int tf_c = TF_CONTINUOUS;
 	Ariadne::Int tf_d = TF_DISCRETE;
@@ -370,16 +375,16 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 	Ariadne::Nat log_verbosity = Ariadne::get_verbosity(argc, argv);
 	
 	Ariadne::CompositeHybridAutomaton system("system", 
-		{
-			HumanIntention(),
-			Operator(),
-			Slave(),
-			Master(),
-			TLM(),
-			TLS(),
-			Environment(),
-			CommunicationChannel()
-		});
+	{
+		HumanIntention(),
+		Operator(),
+		Slave(),
+		Master(),
+		TLM(),
+		TLS(),
+		Environment(),
+		CommunicationChannel()
+	});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
 	std::cout << "\nSystem:\n\n" << system << std::endl;
