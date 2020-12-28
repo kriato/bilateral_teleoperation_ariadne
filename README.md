@@ -1,19 +1,16 @@
 # INSTALL
 
 1) Install [Ariadne](https://github.com/ariadne-cps/ariadne)
-
-2) Clone the repository
+2) Install [yaml-cpp](https://github.com/jbeder/yaml-cpp)
+	```
+	sudo apt install libyaml-cpp-dev
+	```
+3) Clone the repository
 	```
 	git clone https://github.com/kriato/bilateral_teleoperation_ariadne
 	```
 
-3) Clone yaml-cpp repository (used for faster prototyping)
-	```
-	mkdir deps
-	cd deps
-	git clone https://github.com/jbeder/yaml-cpp
-	```
-4) Build everything
+4) Build
 	```
 	mkdir build
 	cd build
