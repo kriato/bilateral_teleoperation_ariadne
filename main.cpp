@@ -1,8 +1,6 @@
 #include <iostream>
 #include <ariadne.hpp>
 
-#define PROTOTYPE 1
-
 template<typename T>
 void print(T in, bool newline = true)
 {
@@ -12,104 +10,141 @@ void print(T in, bool newline = true)
 		std::cout << in;
 }
 
-#if PROTOTYPE
-	#include "yaml-cpp/yaml.h"
+#include "yaml-cpp/yaml.h"
 
-	std::string config_path = "../config.yml";
+std::string config_path = "../../config.yml";
 
-	#define PI Ariadne::pi
-	// ENVIRONMENT
-	double QE, KE, BE;
-	// OPERATOR
-	double PO, DO, FREQ, AMP;
-	// SLAVE
-	double ARM_S, JS, BS, BhS, JhS, KT2CS, KC2VS, PS, DS;
-	// MASTER
-	double ARM_M, JM, BM, BhM, JhM, KT2CM, KC2VM, PM, DM;
-	// SIMULATION
-	Ariadne::Int TF_CONTINUOUS, TF_DISCRETE;
-	// PLOTS
-	double Y_MIN, Y_MAX;
+#define PI Ariadne::pi
+// ENVIRONMENT
+double QE, KE, BE;
+// OPERATOR
+double PO, DO, FREQ, AMP;
+// SLAVE
+double ARM_S, JS, BS, BhS, JhS, KT2CS, KC2VS, PS, DS;
+// MASTER
+double ARM_M, JM, BM, BhM, JhM, KT2CM, KC2VM, PM, DM;
+// SIMULATION
+Ariadne::Int TF_CONTINUOUS, TF_DISCRETE;
+double TS, STEP_SIZE;
+// PLOTS
+double Y_MIN, Y_MAX;
 
-	void load_settings()
-	{
-		YAML::Node config = YAML::LoadFile(config_path);
-		QE = config["QE"].as<double>(); 
-		KE = config["KE"].as<double>(); 
-		BE = config["BE"].as<double>(); 
-		PO = config["PO"].as<double>();
-		DO = config["DO"].as<double>(); 
-		FREQ = config["FREQ"].as<double>(); 
-		AMP = config["AMP"].as<double>(); 	
-		ARM_S = config["ARM_S"].as<double>();
-		JS = config["JS"].as<double>(); 
-		BS = config["BS"].as<double>(); 
-		BhS = config["BhS"].as<double>(); 
-		JhS = config["JhS"].as<double>();
-		KT2CS = config["KT2CS"].as<double>(); 
-		KC2VS = config["KC2VS"].as<double>();
-		PS = config["PS"].as<double>(); 
-		DS = config["DS"].as<double>(); 
-		ARM_M = config["ARM_M"].as<double>();
-		JM = config["JM"].as<double>(); 
-		BM = config["BM"].as<double>(); 
-		BhM = config["BhM"].as<double>(); 
-		JhM = config["JhM"].as<double>();
-		KT2CM = config["KT2CM"].as<double>(); 
-		KC2VM = config["KC2VM"].as<double>();
-		PM = config["PM"].as<double>(); 
-		DM = config["DM"].as<double>();
-		TF_CONTINUOUS = config["TF_CONTINUOUS"].as<Ariadne::Int>(); 
-		TF_DISCRETE = config["TF_DISCRETE"].as<Ariadne::Int>(); 
-		Y_MIN = config["Y_MIN"].as<double>(); 
-		Y_MAX = config["Y_MAX"].as<double>();
+void load_settings()
+{
+	YAML::Node config = YAML::LoadFile(config_path);
 
-		if (config["DEBUG"].as<bool>()) {
-			print("ENVIRONMENT");
-			print("QE: " + std::to_string(QE));
-			print("KE: " + std::to_string(KE));
-			print("BE: " + std::to_string(BE));
-			print("\nOPERATOR");
-			print("PO: " + std::to_string(PO));
-			print("DO: " + std::to_string(DO));
-			print("FREQ: " + std::to_string(FREQ));
-			print("AMP: " + std::to_string(AMP));
-			print("\nSLAVE");
-			print("ARM_S: " + std::to_string(ARM_S));
-			print("JS: " + std::to_string(JS));
-			print("BS: " + std::to_string(BS));
-			print("BhS: " + std::to_string(BhS));
-			print("JhS: " + std::to_string(JhS));
-			print("KT2CS: " + std::to_string(KT2CS));
-			print("KC2VS: " + std::to_string(KC2VS));
-			print("PS: " + std::to_string(PS));
-			print("DS: " + std::to_string(DS));
-			print("\nMASTER");
-			print("ARM_M: " + std::to_string(ARM_M));
-			print("JM: " + std::to_string(JM));
-			print("BM: " + std::to_string(BM));
-			print("BhM: " + std::to_string(BhM));
-			print("JhM: " + std::to_string(JhM));
-			print("KT2CM: " + std::to_string(KT2CM));
-			print("KC2VM: " + std::to_string(KC2VM));
-			print("PM: " + std::to_string(PM));
-			print("DM: " + std::to_string(DM));
-			print("\nSIMULATION");
-			print("TF_CONTINUOUS: " + std::to_string(TF_CONTINUOUS));
-			print("TF_DISCRETE: " + std::to_string(TF_DISCRETE));
-			print("\nPLOTS");
-			print("Y_MIN: " + std::to_string(Y_MIN));
-			print("Y_MAX: " + std::to_string(Y_MAX));
-			print("");
-		}
+	QE = config["QE"].as<double>(); 
+	KE = config["KE"].as<double>(); 
+	BE = config["BE"].as<double>(); 
+	PO = config["PO"].as<double>();
+	DO = config["DO"].as<double>(); 
+	FREQ = config["FREQ"].as<double>(); 
+	AMP = config["AMP"].as<double>(); 	
+	ARM_S = config["ARM_S"].as<double>();
+	JS = config["JS"].as<double>(); 
+	BS = config["BS"].as<double>(); 
+	BhS = config["BhS"].as<double>(); 
+	JhS = config["JhS"].as<double>();
+	KT2CS = config["KT2CS"].as<double>(); 
+	KC2VS = config["KC2VS"].as<double>();
+	PS = config["PS"].as<double>(); 
+	DS = config["DS"].as<double>(); 
+	ARM_M = config["ARM_M"].as<double>();
+	JM = config["JM"].as<double>(); 
+	BM = config["BM"].as<double>(); 
+	BhM = config["BhM"].as<double>(); 
+	JhM = config["JhM"].as<double>();
+	KT2CM = config["KT2CM"].as<double>(); 
+	KC2VM = config["KC2VM"].as<double>();
+	PM = config["PM"].as<double>(); 
+	DM = config["DM"].as<double>();
+	TF_CONTINUOUS = config["TF_CONTINUOUS"].as<Ariadne::Int>(); 
+	TF_DISCRETE = config["TF_DISCRETE"].as<Ariadne::Int>(); 
+	Y_MIN = config["Y_MIN"].as<double>(); 
+	Y_MAX = config["Y_MAX"].as<double>();
+	TS = config["TS"].as<double>(); 
+	STEP_SIZE = config["STEP_SIZE"].as<double>();
+
+	if (config["DEBUG"].as<bool>()) {
+		print("ENVIRONMENT");
+		print("QE: " + std::to_string(QE));
+		print("KE: " + std::to_string(KE));
+		print("BE: " + std::to_string(BE));
+		print("\nOPERATOR");
+		print("PO: " + std::to_string(PO));
+		print("DO: " + std::to_string(DO));
+		print("FREQ: " + std::to_string(FREQ));
+		print("AMP: " + std::to_string(AMP));
+		print("\nSLAVE");
+		print("ARM_S: " + std::to_string(ARM_S));
+		print("JS: " + std::to_string(JS));
+		print("BS: " + std::to_string(BS));
+		print("BhS: " + std::to_string(BhS));
+		print("JhS: " + std::to_string(JhS));
+		print("KT2CS: " + std::to_string(KT2CS));
+		print("KC2VS: " + std::to_string(KC2VS));
+		print("PS: " + std::to_string(PS));
+		print("DS: " + std::to_string(DS));
+		print("\nMASTER");
+		print("ARM_M: " + std::to_string(ARM_M));
+		print("JM: " + std::to_string(JM));
+		print("BM: " + std::to_string(BM));
+		print("BhM: " + std::to_string(BhM));
+		print("JhM: " + std::to_string(JhM));
+		print("KT2CM: " + std::to_string(KT2CM));
+		print("KC2VM: " + std::to_string(KC2VM));
+		print("PM: " + std::to_string(PM));
+		print("DM: " + std::to_string(DM));
+		print("\nSIMULATION");
+		print("TS: " + std::to_string(TS));
+		print("STEP_SIZE: " + std::to_string(STEP_SIZE));
+		print("TF_CONTINUOUS: " + std::to_string(TF_CONTINUOUS));
+		print("TF_DISCRETE: " + std::to_string(TF_DISCRETE));
+		print("\nPLOTS");
+		print("Y_MIN: " + std::to_string(Y_MIN));
+		print("Y_MAX: " + std::to_string(Y_MAX));
+		print("");
 	}
-#else
-	#include "defines.hpp"
-#endif
+}
 
 // Mimic the overriden operator outside the namespace 
 Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(Ariadne::StringVariable base, std::string location) {{ using namespace Ariadne; return base|location;};}
 Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(std::string base, std::string location) {{ using namespace Ariadne; return Ariadne::StringVariable(base)|Ariadne::StringConstant(location);};}
+
+Ariadne::HybridAutomaton Clock()
+{
+	Ariadne::RealConstant ts("ts", Ariadne::Decimal(TS));
+	Ariadne::RealVariable counter("cnt");
+
+	Ariadne::HybridAutomaton clock("clock");
+	Ariadne::DiscreteLocation loc;
+
+	Ariadne::DiscreteEvent clock_event("clock_event");
+
+	clock.new_mode(loc, Ariadne::dot({counter}) = {1});
+
+	clock.new_transition(clock_event, {Ariadne::next(counter)=0}, counter >= ts, Ariadne::EventKind::PERMISSIVE);
+
+	return clock;
+}
+
+Ariadne::HybridAutomaton Holder()
+{	
+	Ariadne::RealVariable counter("cnt");
+	Ariadne::RealVariable position_master_d("qm_d");
+	Ariadne::RealVariable position_master("qm");
+
+	Ariadne::HybridAutomaton holder("holder");
+	Ariadne::DiscreteLocation loc;
+
+	Ariadne::DiscreteEvent clock_event("clock_event");
+
+	holder.new_mode(loc, Ariadne::dot({position_master_d}) = {0});
+
+	holder.new_transition(loc, clock_event, loc, {Ariadne::next(position_master_d)=position_master});
+
+	return holder;
+}
 
 Ariadne::HybridAutomaton CommunicationChannel()
 {
@@ -154,17 +189,11 @@ Ariadne::HybridAutomaton Environment()
 	Ariadne::DiscreteEvent no_force_inv("no_force_inv");
 	Ariadne::DiscreteEvent force_inv("force_inv");
 
-	env.new_mode(contact, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
+	env.new_mode(contact, Ariadne::let({env_force}) = {-K * (position_slave - position_env) + B * velocity_slave});
 	env.new_mode(free_motion, Ariadne::let({env_force}) = {0});
 
-	Ariadne::RealConstant delta("delta", Ariadne::Decimal(0.01));
-
-	// TODO ?
-	// env.new_invariant(free_motion, position_slave >= position_env, force_inv);
-	// env.new_invariant(contact, position_env < position_slave, no_force_inv);
-
-	env.new_transition(free_motion, force, contact, position_env <= position_slave + delta, Ariadne::EventKind::URGENT);
-	env.new_transition(contact, no_force, free_motion, position_env >= position_slave - delta, Ariadne::EventKind::URGENT);
+	env.new_transition(free_motion, force, contact, position_env <= position_slave, Ariadne::EventKind::URGENT);
+	env.new_transition(contact, no_force, free_motion, position_env >= position_slave, Ariadne::EventKind::URGENT);
 	
 	return env;
 }
@@ -318,8 +347,11 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable env_force("fe");
 	Ariadne::RealVariable t("t");
 
+	Ariadne::RealVariable position_master_d("qm_d");
+	Ariadne::RealVariable counter("cnt");
+
 	Ariadne::HybridSimulator simulator;
-	simulator.set_step_size(0.01);
+	simulator.set_step_size(STEP_SIZE);
 	simulator.verbosity = log_verbosity;
 
 	Ariadne::HybridRealPoint initial_point(
@@ -333,7 +365,9 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			velocity_slave=0,
 			position_ref=0,
 			velocity_ref=0, 
-			t = 0
+			t = 0,
+			position_master_d = 0,
+			counter = 0
 		}
 	);
 
@@ -349,16 +383,19 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	std::cout << "done!\n" << std::endl;
 
 	std::cout << "Plotting simulation trajectory..\n" << std::flush;
-	plot("ref_pos",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_ref<=ymax),orbit);
-	plot("ref_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_ref<=ymax),orbit);
-	plot("master_pos",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_master<=ymax),orbit);
-	plot("master_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_master<=ymax),orbit);
-	plot("slave_pos",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_slave<=ymax),orbit);
-	plot("slave_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_slave<=ymax),orbit);
+	plot("plots/ref_pos",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_ref<=ymax),orbit);
+	plot("plots/ref_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_ref<=ymax),orbit);
+	plot("plots/master_pos",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_master<=ymax),orbit);
+	plot("plots/master_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_master<=ymax),orbit);
+	plot("plots/slave_pos",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_slave<=ymax),orbit);
+	plot("plots/slave_vel",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_slave<=ymax),orbit);
 
-	plot("torque_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=torque_m<=ymax),orbit);
-	plot("torque_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=torque_s<=ymax),orbit);
-	plot("env_force",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=env_force<=ymax),orbit);
+	plot("plots/torque_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=torque_m<=ymax),orbit);
+	plot("plots/torque_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=torque_s<=ymax),orbit);
+	plot("plots/env_force",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=env_force<=ymax),orbit);
+
+	plot("plots/cnt",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, Ariadne::Decimal(0) <=counter<=Ariadne::Decimal(0.01)),orbit);
+	plot("plots/qm_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_master_d<=ymax),orbit);
 
 	std::cout << "done!\n" << std::endl;
 }
@@ -383,7 +420,9 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 		TLM(),
 		TLS(),
 		Environment(),
-		CommunicationChannel()
+		CommunicationChannel(),
+		Holder(),
+		Clock()
 	});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
