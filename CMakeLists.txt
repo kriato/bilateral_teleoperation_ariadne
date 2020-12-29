@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Find Ariadne and Yaml packages
 find_package(Ariadne REQUIRED)
-find_package(Yaml REQUIRED)
+find_package(YAML REQUIRED)
 
 # Add the Ariadne headers and Yaml headers to the includes
 include_directories(SYSTEM ${ARIADNE_INCLUDE_DIRS} ${YAML_INCLUDES})

@@ -109,7 +109,7 @@ void print(T in, bool newline = true)
 
 // Mimic the overriden operator outside the namespace 
 Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(Ariadne::StringVariable base, std::string location) {{ using namespace Ariadne; return base|location;};}
-Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(std::string base, std::string location) {{ using namespace Ariadne; return Ariadne::StringVariable("base")|Ariadne::StringConstant(location);};}
+Ariadne::Pair<Ariadne::StringVariable, Ariadne::String> getPair(std::string base, std::string location) {{ using namespace Ariadne; return Ariadne::StringVariable(base)|Ariadne::StringConstant(location);};}
 
 Ariadne::HybridAutomaton CommunicationChannel()
 {
@@ -154,8 +154,8 @@ Ariadne::HybridAutomaton Environment()
 	Ariadne::DiscreteEvent no_force_inv("no_force_inv");
 	Ariadne::DiscreteEvent force_inv("force_inv");
 
-	env.new_mode(free_motion, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
-	env.new_mode(contact, Ariadne::let({env_force}) = {0});
+	env.new_mode(contact, Ariadne::let({env_force}) = {K * (position_slave - position_env) + B * velocity_slave});
+	env.new_mode(free_motion, Ariadne::let({env_force}) = {0});
 
 	Ariadne::RealConstant delta("delta", Ariadne::Decimal(0.01));
 
