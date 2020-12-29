@@ -133,15 +133,21 @@ Ariadne::HybridAutomaton Holder()
 	Ariadne::RealVariable counter("cnt");
 	Ariadne::RealVariable position_master_d("qm_d");
 	Ariadne::RealVariable position_master("qm");
+	Ariadne::RealVariable position_slave_d("qs_d");
+	Ariadne::RealVariable position_slave("qs");
+	Ariadne::RealVariable velocity_master_d("qm_dot_d");
+	Ariadne::RealVariable velocity_master("qm_dot");
+	Ariadne::RealVariable velocity_slave_d("qs_dot_d");
+	Ariadne::RealVariable velocity_slave("qs_dot");
 
 	Ariadne::HybridAutomaton holder("holder");
 	Ariadne::DiscreteLocation loc;
 
 	Ariadne::DiscreteEvent clock_event("clock_event");
 
-	holder.new_mode(loc, Ariadne::dot({position_master_d}) = {0});
+	holder.new_mode(loc, Ariadne::dot({position_master_d, position_slave_d, velocity_master_d, velocity_slave_d}) = {0, 0, 0, 0});
 
-	holder.new_transition(loc, clock_event, loc, {Ariadne::next(position_master_d)=position_master});
+	holder.new_transition(loc, clock_event, loc, Ariadne::next({position_master_d, position_slave_d, velocity_master_d, velocity_slave_d})={position_master, position_slave, velocity_master, velocity_slave});
 
 	return holder;
 }
@@ -348,6 +354,9 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable t("t");
 
 	Ariadne::RealVariable position_master_d("qm_d");
+	Ariadne::RealVariable position_slave_d("qs_d");
+	Ariadne::RealVariable velocity_master_d("qm_dot_d");
+	Ariadne::RealVariable velocity_slave_d("qs_dot_d");
 	Ariadne::RealVariable counter("cnt");
 
 	Ariadne::HybridSimulator simulator;
@@ -367,6 +376,9 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			velocity_ref=0, 
 			t = 0,
 			position_master_d = 0,
+			position_slave_d = 0,
+			velocity_master_d = 0,
+			velocity_slave_d = 0,
 			counter = 0
 		}
 	);
@@ -396,19 +408,18 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 
 	plot("plots/cnt",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, Ariadne::Decimal(0) <=counter<=Ariadne::Decimal(0.01)),orbit);
 	plot("plots/qm_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_master_d<=ymax),orbit);
+	plot("plots/qs_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_slave_d<=ymax),orbit);
+	plot("plots/qm_dot_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_master_d<=ymax),orbit);
+	plot("plots/qs_dot_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_slave_d<=ymax),orbit);
 
 	std::cout << "done!\n" << std::endl;
 }
 
 Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 {	
-	#if PROTOTYPE
-		print("Loading parameters from yaml");
-		load_settings();
-	#else
-		print("Loading parameters from header");
-	#endif
-
+	
+	load_settings();
+	
 	Ariadne::Nat log_verbosity = Ariadne::get_verbosity(argc, argv);
 	
 	Ariadne::CompositeHybridAutomaton system("system", 
