@@ -1,5 +1,11 @@
 #include <iostream>
 #include <ariadne.hpp>
+#include "yaml-cpp/yaml.h"
+#define PI Ariadne::pi
+
+// CHANGE THE DEFINE TO CHANGE THE TELEOPERATION INPUT
+#define SINE
+// #define STEP 
 
 template<typename T>
 void print(T in, bool newline = true)
@@ -10,15 +16,18 @@ void print(T in, bool newline = true)
 		std::cout << in;
 }
 
-#include "yaml-cpp/yaml.h"
+#if defined(SINE)
+	std::string config_path = "../../config_sine.yml";
+	double FREQ, AMP;
+#elif defined(STEP)
+	std::string config_path = "../../config_step.yml";
+	double START_TIME, UP_TIME, AMP;
+#endif
 
-std::string config_path = "../../config.yml";
-
-#define PI Ariadne::pi
+// OPERATOR
+double PO, DO;
 // ENVIRONMENT
 double QE, KE, BE;
-// OPERATOR
-double PO, DO, FREQ, AMP;
 // SLAVE
 double ARM_S, JS, BS, BhS, JhS, KT2CS, KC2VS, PS, DS;
 // MASTER
@@ -37,9 +46,17 @@ void load_settings()
 	KE = config["KE"].as<double>(); 
 	BE = config["BE"].as<double>(); 
 	PO = config["PO"].as<double>();
-	DO = config["DO"].as<double>(); 
+	DO = config["DO"].as<double>();
+
+	#if defined(SINE) 
 	FREQ = config["FREQ"].as<double>(); 
-	AMP = config["AMP"].as<double>(); 	
+	AMP = config["AMP"].as<double>();
+	#elif defined(STEP) 
+	UP_TIME = config["UP_TIME"].as<double>(); 
+	START_TIME = config["START_TIME"].as<double>(); 
+	AMP = config["AMP"].as<double>();
+	#endif	
+
 	ARM_S = config["ARM_S"].as<double>();
 	JS = config["JS"].as<double>(); 
 	BS = config["BS"].as<double>(); 
@@ -73,8 +90,16 @@ void load_settings()
 		print("\nOPERATOR");
 		print("PO: " + std::to_string(PO));
 		print("DO: " + std::to_string(DO));
+
+		#if defined(SINE) 
 		print("FREQ: " + std::to_string(FREQ));
 		print("AMP: " + std::to_string(AMP));
+		#elif defined(STEP)
+		print("UP_TIME: " + std::to_string(UP_TIME));
+		print("START_TIME: " + std::to_string(START_TIME));
+		print("AMP: " + std::to_string(AMP)); 
+		#endif
+
 		print("\nSLAVE");
 		print("ARM_S: " + std::to_string(ARM_S));
 		print("JS: " + std::to_string(JS));
@@ -311,24 +336,66 @@ Ariadne::HybridAutomaton Operator()
 	return operator_;
 }
 
+#if defined (SINE)
 Ariadne::HybridAutomaton HumanIntention()
 {
 	Ariadne::RealConstant freq("freq", Ariadne::Decimal(FREQ));
 	Ariadne::RealConstant amp("amp", Ariadne::Decimal(AMP));
-	
+
 	Ariadne::RealVariable position_ref("qm_ref");
 	Ariadne::RealVariable velocity_ref("qm_dot_ref");
 	Ariadne::RealVariable t("t");
 
 	Ariadne::HybridAutomaton intention("human_intention");
 	Ariadne::DiscreteLocation loc;
-	
+
 	// intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref,t}) = {1, velocity_ref,1});
-	intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref, t}) = {amp*2*PI*freq*cos(2*PI*t*freq), velocity_ref, 1});
+	intention.new_mode(loc, Ariadne::dot({velocity_ref, position_ref}) = {amp*2*PI*freq*cos(2*PI*t*freq), velocity_ref});
 	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref,t}) = {-amp * sin(2*PI*t*freq), velocity_ref,1});
 	// intention.new_mode(loc, Ariadne::let({velocity_ref, position_ref}) = {amp * cos(2*PI*t*freq), amp * sin(2*PI*t*freq)}, Ariadne::dot(t) = 1);
-	
+
 	return intention;
+}
+#elif defined (STEP)
+Ariadne::HybridAutomaton HumanIntention()
+{
+	Ariadne::RealConstant start("start", Ariadne::Decimal(START_TIME));
+	Ariadne::RealConstant up("up", Ariadne::Decimal(UP_TIME));
+	Ariadne::RealConstant amp("amp", Ariadne::Decimal(AMP));
+
+	Ariadne::RealVariable position_ref("qm_ref");
+	Ariadne::RealVariable velocity_ref("qm_dot_ref");
+	Ariadne::RealVariable t("t");
+
+	Ariadne::StringVariable name("human_intention");
+	Ariadne::HybridAutomaton intention(name.name());
+	Ariadne::DiscreteLocation low(getPair(name,"low"));
+	Ariadne::DiscreteLocation changing(getPair(name,"changing"));
+	Ariadne::DiscreteLocation stable(getPair(name,"stable"));
+
+	Ariadne::DiscreteEvent change("change");
+	Ariadne::DiscreteEvent high("high");
+
+	intention.new_mode(low, Ariadne::dot({velocity_ref, position_ref}) = {0, 0});
+	intention.new_mode(changing, Ariadne::dot({velocity_ref, position_ref}) = {0, 0});
+	intention.new_mode(stable, Ariadne::dot({velocity_ref, position_ref}) = {0, 0});
+
+	intention.new_transition(low, change, changing, Ariadne::next({position_ref, velocity_ref})={amp, amp}, t >= start, Ariadne::EventKind::URGENT);
+	intention.new_transition(changing, high, stable, Ariadne::next({position_ref, velocity_ref})={amp, 0}, t >= up, Ariadne::EventKind::URGENT);
+
+	return intention;
+}
+#endif
+
+Ariadne::HybridAutomaton Time()
+{
+	Ariadne::RealVariable t("t");
+
+	Ariadne::HybridAutomaton time("time");
+	Ariadne::DiscreteLocation loc;
+
+	time.new_mode(loc, Ariadne::dot({t}) = {1});	
+	return time;
 }
 
 Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system, const Nat& log_verbosity)
@@ -365,7 +432,8 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 
 	Ariadne::HybridRealPoint initial_point(
 		{
-			getPair("env","free_motion")
+			getPair("env","free_motion"),
+			getPair("human_intention", "low")
 		},
 		{
 			position_master=0, 
@@ -417,7 +485,6 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 
 Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 {	
-	
 	load_settings();
 	
 	Ariadne::Nat log_verbosity = Ariadne::get_verbosity(argc, argv);
@@ -433,7 +500,8 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 		Environment(),
 		CommunicationChannel(),
 		Holder(),
-		Clock()
+		Clock(),
+		Time()
 	});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
