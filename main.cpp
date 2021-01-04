@@ -155,7 +155,6 @@ Ariadne::HybridAutomaton Clock()
 
 Ariadne::HybridAutomaton Holder()
 {	
-	Ariadne::RealVariable counter("cnt");
 	Ariadne::RealVariable position_master_d("qm_d");
 	Ariadne::RealVariable position_master("qm");
 	Ariadne::RealVariable position_slave_d("qs_d");
@@ -164,25 +163,98 @@ Ariadne::HybridAutomaton Holder()
 	Ariadne::RealVariable velocity_master("qm_dot");
 	Ariadne::RealVariable velocity_slave_d("qs_dot_d");
 	Ariadne::RealVariable velocity_slave("qs_dot");
+	Ariadne::RealVariable env_force("fe");
+	Ariadne::RealVariable env_force_d("fe_d");
 
 	Ariadne::HybridAutomaton holder("holder");
 	Ariadne::DiscreteLocation loc;
 
 	Ariadne::DiscreteEvent clock_event("clock_event");
 
-	holder.new_mode(loc, Ariadne::dot({position_master_d, position_slave_d, velocity_master_d, velocity_slave_d}) = {0, 0, 0, 0});
+	holder.new_mode(loc, Ariadne::dot({position_master_d, position_slave_d, velocity_master_d, velocity_slave_d, env_force_d}) = {0, 0, 0, 0, 0});
 
-	holder.new_transition(loc, clock_event, loc, Ariadne::next({position_master_d, position_slave_d, velocity_master_d, velocity_slave_d})={position_master, position_slave, velocity_master, velocity_slave});
+	holder.new_transition(loc, clock_event, loc, Ariadne::next(
+		{position_master_d, position_slave_d, velocity_master_d, velocity_slave_d, env_force_d}) =
+		{position_master, position_slave, velocity_master, velocity_slave, env_force});
 
 	return holder;
 }
 
+Ariadne::HybridAutomaton OneDelay()
+{	
+	Ariadne::RealVariable position_master_d("qm_d");
+	Ariadne::RealVariable position_slave_d("qs_d");	
+	Ariadne::RealVariable position_master_d_prev("qm_d_prev");
+	Ariadne::RealVariable position_slave_d_prev("qs_d_prev");
+
+	Ariadne::HybridAutomaton one_delay("one_delay");
+	Ariadne::DiscreteLocation loc;
+
+	Ariadne::DiscreteEvent clock_event("clock_event");
+
+	one_delay.new_mode(loc, Ariadne::dot({position_slave_d_prev, position_master_d_prev}) = {0, 0});
+	
+	one_delay.new_transition(loc, clock_event, loc, Ariadne::next({position_master_d_prev, position_slave_d_prev})={position_master_d, position_slave_d});
+
+	return one_delay;
+}
+
+Ariadne::HybridAutomaton PLM()
+{	
+	Ariadne::RealVariable position_master_d("qm_d");
+	Ariadne::RealVariable velocity_master_d("qm_dot");
+	Ariadne::RealVariable position_master_d_prev("qm_d_prev");
+	Ariadne::RealVariable tau_tl("tau_tlm");
+	Ariadne::RealVariable tau_pl("tau_plm");
+	Ariadne::RealVariable tau_tlc("tau_tlc");
+
+	Ariadne::RealConstant ts("ts", Ariadne::Decimal(TS));
+	Ariadne::RealVariable counter("cnt");
+
+	Ariadne::RealConstant zero("zero", Ariadne::Decimal(0));
+	Ariadne::RealConstant Hmax("Hmax_m", Ariadne::Decimal(1.0));
+	Ariadne::RealConstant Hmin("Hmin_m", Ariadne::Decimal(1.0));
+	Ariadne::RealConstant Hd("Hd_m", Ariadne::Decimal(1.0));
+	Ariadne::RealConstant beta("beta_m", Ariadne::Decimal(1.0));
+	Ariadne::RealConstant alpha("alpha_m", Ariadne::Decimal(1.0));
+
+	Ariadne::RealVariable H("Hm");
+	Ariadne::RealVariable H_in("H+m");
+	Ariadne::RealVariable H_out("H-m");
+
+	Ariadne::HybridAutomaton plm("plm");
+	Ariadne::DiscreteLocation loc;
+	
+	Ariadne::DiscreteEvent change_plm("change_plm");
+
+	Ariadne::RealExpression newH = H + H_in;
+	Ariadne::RealExpression deltaQ = (position_master_d - position_master_d_prev);
+	Ariadne::RealExpression deltaH = deltaQ * tau_tl;
+	Ariadne::RealExpression Htilde = newH - deltaH;
+	Ariadne::RealExpression tau_tlc_exp = -alpha * (Hd - H) * velocity_master_d;
+
+	Ariadne::RealExpression Htrue = Htilde - beta * Htilde;
+	Ariadne::RealExpression Hfalse = zero;
+	 
+	plm.new_mode(loc, Ariadne::dot({tau_pl, H, H_out, tau_tlc}) = {0, 0, 0, 0});
+
+	// TODO Add all possible transitions (12)
+	plm.new_transition(change_plm, Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde > Hmin) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // T_TT
+	// plm.new_transition(change_plm, Ariadne::next({counter, tau_pl, H, H_out})={0}, (counter >= ts) && (Htilde <= Hmin), Ariadne::EventKind::PERMISSIVE); // F
+
+	return plm;
+}
+
+// TODO Add PLS
+
 Ariadne::HybridAutomaton CommunicationChannel()
 {
-	Ariadne::RealVariable position_master("qm");
-	Ariadne::RealVariable velocity_master("qm_dot");
-	Ariadne::RealVariable position_slave("qs");
-	Ariadne::RealVariable velocity_slave("qs_dot");
+	// TODO Add energy packets
+	// Passing to the other side the discretized values
+	Ariadne::RealVariable position_master("qm_d");
+	Ariadne::RealVariable velocity_master("qm_dot_d");
+	Ariadne::RealVariable position_slave("qs_d");
+	Ariadne::RealVariable velocity_slave("qs_dot_d");
 	
 	Ariadne::RealVariable position_master_m2s("qm_m2s");
 	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
@@ -192,11 +264,17 @@ Ariadne::HybridAutomaton CommunicationChannel()
 	Ariadne::HybridAutomaton comm("comm_channel");
 	Ariadne::DiscreteLocation loc;
 
+	Ariadne::DiscreteEvent clock_event("clock_event");
+
+	// comm.new_mode(loc, Ariadne::dot({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m}) = {0, 0, 0, 0});
+
+	// comm.new_transition(loc, clock_event, loc, Ariadne::next(
+	// 	{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m}) = 
+	// 	{position_master, velocity_master, position_slave, velocity_slave});
+
 	comm.new_mode(loc, Ariadne::let(
 		{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m}) = 
-		{position_master, velocity_master, position_slave, velocity_slave}
-		);
-
+		{position_master, velocity_master, position_slave, velocity_slave});
 	return comm;
 }
 
@@ -234,16 +312,23 @@ Ariadne::HybridAutomaton TLM()
 	Ariadne::RealConstant P("P", Ariadne::Decimal(PM));
 	Ariadne::RealConstant D("D", Ariadne::Decimal(DM));
 	
-	Ariadne::RealVariable position_master("qm");
-	Ariadne::RealVariable velocity_master("qm_dot");
+	// Need to use the discretetized one even if the event is called every ts?
+	Ariadne::RealVariable position_master("qm_d");
+	Ariadne::RealVariable velocity_master("qm_dot_d");
 	Ariadne::RealVariable position_slave_s2m("qs_s2m");
 	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
-	Ariadne::RealVariable torque("tau_m");
+	Ariadne::RealVariable torque("tau_tlm");
 
 	Ariadne::HybridAutomaton tlm("tlm");
 	Ariadne::DiscreteLocation loc;
 
+	Ariadne::DiscreteEvent clock_event("clock_event");
+	
 	tlm.new_mode(loc, Ariadne::let({torque}) = {(position_master - position_slave_s2m) * P + (velocity_master - velocity_slave_s2m) * D});
+
+	// tlm.new_mode(loc, Ariadne::dot({torque}) = {0});
+
+	// tlm.new_transition(loc, clock_event, loc, Ariadne::next({torque}) = {(position_master - position_slave_s2m) * P + (velocity_master - velocity_slave_s2m) * D});
 
 	return tlm;
 }
@@ -255,15 +340,20 @@ Ariadne::HybridAutomaton TLS()
 	
 	Ariadne::RealVariable position_master_m2s("qm_m2s");
 	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
-	Ariadne::RealVariable position_slave("qs");
-	Ariadne::RealVariable velocity_slave("qs_dot");
-	Ariadne::RealVariable torque("tau_s");
+	// Need to use the discretetized one even if the event is called every ts?
+	Ariadne::RealVariable position_slave("qs_d");
+	Ariadne::RealVariable velocity_slave("qs_dot_d");
+	Ariadne::RealVariable torque("tau_tls");
 
 	Ariadne::HybridAutomaton tls("tls");
-
 	Ariadne::DiscreteLocation loc;
 
+	Ariadne::DiscreteEvent clock_event("clock_event");
+
 	tls.new_mode(loc, Ariadne::let({torque}) = {(position_master_m2s - position_slave) * P + (velocity_master_m2s - velocity_slave) * D});
+
+	// tls.new_mode(loc, Ariadne::dot({torque}) = {0});
+	// tls.new_transition(loc, clock_event, loc, Ariadne::next({torque}) = {(position_master_m2s - position_slave) * P + (velocity_master_m2s - velocity_slave) * D});
 
 	return tls;
 }
@@ -277,7 +367,7 @@ Ariadne::HybridAutomaton Master()
 	Ariadne::RealConstant t2c("Kt2c_m", Ariadne::Decimal(KT2CM));
 	Ariadne::RealConstant c2v("Kc2v_m", Ariadne::Decimal(KC2VM));
 
-	Ariadne::RealVariable torque("tau_m");
+	Ariadne::RealVariable torque("tau_plm");
 	Ariadne::RealVariable position_master("qm");
 	Ariadne::RealVariable velocity_master("qm_dot");
 	Ariadne::RealVariable human_force("h_m_star");
@@ -288,7 +378,6 @@ Ariadne::HybridAutomaton Master()
 	Ariadne::RealExpression acc_master = (((torque + (human_force * arm)) * t2c * c2v) + (B * velocity_master)) / J; 
 
 	master.new_mode(loc, Ariadne::dot({velocity_master, position_master}) = {acc_master, velocity_master});
-
 
 	return master;
 }
@@ -302,7 +391,7 @@ Ariadne::HybridAutomaton Slave()
 	Ariadne::RealConstant t2c("Kt2c_s", Ariadne::Decimal(KT2CS));
 	Ariadne::RealConstant c2v("Kc2v_s", Ariadne::Decimal(KC2VS));
 
-	Ariadne::RealVariable torque("tau_s");
+	Ariadne::RealVariable torque("tau_pls");
 	Ariadne::RealVariable env_force("fe");
 	Ariadne::RealVariable position_slave("qs");
 	Ariadne::RealVariable velocity_slave("qs_dot");
@@ -331,6 +420,7 @@ Ariadne::HybridAutomaton Operator()
 	Ariadne::HybridAutomaton operator_("human_operator");
 	Ariadne::DiscreteLocation loc;
 
+	// Discretized with clock event or continuous?
 	operator_.new_mode(loc, Ariadne::let({human_force}) = {(position_ref - position_slave_s2m) * P + (velocity_ref - velocity_slave_s2m) * D});
 
 	return operator_;
@@ -402,16 +492,11 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 {
 	Ariadne::RealVariable position_master("qm");
 	Ariadne::RealVariable velocity_master("qm_dot");
-	Ariadne::RealVariable torque_m("tau_m");
+	Ariadne::RealVariable torque_m("tau_plm");
 
 	Ariadne::RealVariable position_slave("qs");
 	Ariadne::RealVariable velocity_slave("qs_dot");
-	Ariadne::RealVariable torque_s("tau_s");
-	
-	Ariadne::RealVariable position_master_m2s("qm_m2s");
-	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
-	Ariadne::RealVariable position_slave_s2m("qs_s2m");
-	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
+	Ariadne::RealVariable torque_s("tau_pls");
 
 	Ariadne::RealVariable position_ref("qm_ref");
 	Ariadne::RealVariable velocity_ref("qm_dot_ref");
@@ -424,7 +509,10 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable position_slave_d("qs_d");
 	Ariadne::RealVariable velocity_master_d("qm_dot_d");
 	Ariadne::RealVariable velocity_slave_d("qs_dot_d");
+	Ariadne::RealVariable env_force_d("fe_d");
 	Ariadne::RealVariable counter("cnt");
+
+	// TODO Add new variables from PL
 
 	Ariadne::HybridSimulator simulator;
 	simulator.set_step_size(STEP_SIZE);
@@ -436,18 +524,20 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			getPair("human_intention", "low")
 		},
 		{
-			position_master=0, 
-			velocity_master=0,
-			position_slave=0,
-			velocity_slave=0,
-			position_ref=0,
-			velocity_ref=0, 
+			position_master = 0, 
+			velocity_master = 0,
+			position_slave = 0,
+			velocity_slave = 0,
+			position_ref = 0,
+			velocity_ref = 0, 
 			t = 0,
 			position_master_d = 0,
 			position_slave_d = 0,
 			velocity_master_d = 0,
 			velocity_slave_d = 0,
+			env_force_d=0,
 			counter = 0
+			// TODO Add new var from PL
 		}
 	);
 
@@ -474,11 +564,14 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	plot("plots/torque_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=torque_s<=ymax),orbit);
 	plot("plots/env_force",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=env_force<=ymax),orbit);
 
-	plot("plots/cnt",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, Ariadne::Decimal(0) <=counter<=Ariadne::Decimal(0.01)),orbit);
+	plot("plots/cnt",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, Ariadne::Decimal(0) <=counter<=Ariadne::Decimal(0.005)),orbit);
 	plot("plots/qm_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_master_d<=ymax),orbit);
 	plot("plots/qs_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=position_slave_d<=ymax),orbit);
 	plot("plots/qm_dot_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_master_d<=ymax),orbit);
 	plot("plots/qs_dot_d",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=velocity_slave_d<=ymax),orbit);
+
+	// Testing delay
+	// TODO Add new var from PL
 
 	std::cout << "done!\n" << std::endl;
 }
@@ -501,7 +594,10 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 		CommunicationChannel(),
 		Holder(),
 		Clock(),
-		Time()
+		Time(),
+		OneDelay(),
+		PLM()
+		// TODO Add PLS
 	});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
