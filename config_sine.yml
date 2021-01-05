@@ -42,3 +42,11 @@ Y_MIN: -2
 Y_MAX: 2
 
 DEBUG: False
+LOG_FILE: "log.txt"
+
+# TWO LAYER
+HMAX: 1.0
+HMIN: 0.0
+HD: 0.5
+ALPHA: 0.1
+BETA: 0.1
