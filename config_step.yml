@@ -1,7 +1,7 @@
 # ENVIRONMENT
-QE: 10
-KE: 10.0
-BE: 0.5
+QE: 0.6
+KE: 40.0
+BE: 0.1
 
 # OPERATOR
 PO: 3
@@ -18,8 +18,8 @@ BhS: 0.02 #???
 JhS: 0.02 #???
 KT2CS: 1.182
 KC2VS: 2.0
-PS: 80
-DS: 8.5
+PS: 110
+DS: 12
 
 # MASTER
 ARM_M: 0.1
@@ -29,8 +29,8 @@ BhM: 0.02 #???
 JhM: 0.02 #???
 KT2CM: 1.182
 KC2VM: 2.0
-PM: 60
-DM: 3
+PM: 100
+DM: 10
 
 # SIMULATION
 TS: 0.005

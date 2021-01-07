@@ -10,15 +10,30 @@ for n in range(0,len(idx)-1):
     subs.append(content[idx[n]:idx[n+1]])
 
 # f = open('values.txt', 'w')
+all_ts = []
+all_val = []
 whole = ''
 for episode in subs:
     points_idx = episode.index('points')
     regex = re.compile(r'\[.*?\]')
     res = re.findall(regex, episode[points_idx:])
-    for tmp in res:
-        # f.write(tmp[1:-1] + '\n')
-        whole += tmp[1:-1] + '\n'
+    regex = re.compile(r' .*?\:')
+    ts = re.findall(regex, episode[points_idx:])
+    for index, (t,val) in enumerate(zip(ts,res)):
+        all_ts.append(t[1:-1])
+        all_val.append(val[1:-1])
 
+assert(len(all_ts), len(all_val))
+for index, (t,val) in enumerate(zip(all_ts,all_val)):
+    try:
+        if t == all_ts[index+1]:
+            print('skip')
+            continue
+    except IndexError:
+        print('passing')
+        pass
+    # f.write(t + ' | ' + val + '\n')
+    whole += val + '\n'
 # f.close()
 
 import numpy as np
