@@ -222,6 +222,27 @@ Ariadne::HybridAutomaton OneDelay()
 	return one_delay;
 }
 
+Ariadne::HybridAutomaton RandomGenerator()
+{
+    Ariadne::RealVariable rand_mod("rand_mod");
+    Ariadne::RealVariable rand_a("rand_a");
+    Ariadne::RealVariable rand_c("rand_c");
+    Ariadne::RealVariable rand_seed("rand_seed");
+
+    Ariadne::HybridAutomaton rand_gen("rand_gen");
+    Ariadne::DiscreteLocation loc;
+    
+    Ariadne::RealExpression var = rand_a * rand_seed + rand_c;
+    Ariadne::RealExpression d = REAL(INT(var / rand_mod)); //or REAL(FLOOR(var / rand_mod))
+
+    // dot = 0
+
+    // update on the reset, not with the dynamics of the location
+    rand_gen.new_mode(loc, Ariadne::let({rand_seed, rand_mod, rand_a, rand_c})={var - (rand_mod * d), rand_mod + 1, rand_a + 1, rand_c + 1});
+
+    return rand_gen;
+}
+
 Ariadne::HybridAutomaton PLM()
 {	
 	Ariadne::RealVariable position_master_d("qm_d");
@@ -231,9 +252,6 @@ Ariadne::HybridAutomaton PLM()
 	Ariadne::RealVariable tau_pl("tau_plm");
 	Ariadne::RealVariable tau_tlc("tau_tlc");
 	Ariadne::RealVariable deltaH_debug("deltaH_m");
-
-	// Ariadne::RealConstant ts("ts", Ariadne::Decimal(TS));
-	// Ariadne::RealVariable counter("cnt");
 
 	Ariadne::RealConstant zero("zero", Ariadne::Decimal(0));
 	Ariadne::RealConstant minus_one("minus_one", Ariadne::Decimal(-1.0));
@@ -293,9 +311,6 @@ Ariadne::HybridAutomaton PLM()
 	plm.new_transition(loc[4], events[4], loc[5], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug}) = {tau_pl, H, H_out, tau_tlc, deltaH_debug}, (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE);
 	plm.new_transition(loc[4], events[5], loc[6], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug}) = {tau_pl, H, H_out, tau_tlc, deltaH_debug}, (Htrue <= Hmax), Ariadne::EventKind::PERMISSIVE);
 
-	// plm.new_transition(loc[2], events[6], loc[7], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug}) = {tau_pl, H, H_out, tau_tlc, deltaH_debug}, (deltaQ == zero), Ariadne::EventKind::PERMISSIVE);
-	// plm.new_transition(loc[2], events[7], loc[8], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug}) = {tau_pl, H, H_out, tau_tlc, deltaH_debug}, (deltaQ != zero), Ariadne::EventKind::PERMISSIVE);
-
 	plm.new_transition(loc[2], events[6], loc[7], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug}) = {tau_pl, H, H_out, tau_tlc, deltaH_debug}, (tau_tl > zero), Ariadne::EventKind::PERMISSIVE);
 	plm.new_transition(loc[2], events[7], loc[8], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug}) = {tau_pl, H, H_out, tau_tlc, deltaH_debug}, (tau_tl <= zero), Ariadne::EventKind::PERMISSIVE);
 	
@@ -310,26 +325,6 @@ Ariadne::HybridAutomaton PLM()
 	plm.new_transition(loc[7], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug})={abs(mod_tau_tl) + tau_tlc_exp_hmin, Hmin, zero, tau_tlc_exp_hmin, deltaH}); // Reducing the torque, sign was positive
 	plm.new_transition(loc[9], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug})={tau_tlc_exp_hmin, Hmin, zero, tau_tlc_exp_hmin, deltaH}); // No energy available and no movement 
 	plm.new_transition(loc[10], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, tau_tlc, deltaH_debug})={minus_one * abs(mod_tau_tl) + tau_tlc_exp_hmin, Hmin, zero, tau_tlc_exp_hmin, deltaH}); // Reducing the torque, sign was negative
-
-	// plm.new_transition(events[0], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde > Hmin) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // T_TT  NOT GONNA HAPPEN!
-	// plm.new_transition(events[1], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Htrue, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde > Hmin) && (Htrue < Hd) && (Htrue <= Hmax), Ariadne::EventKind::PERMISSIVE); // T_TF
-	// plm.new_transition(events[2], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + zero, Hmax, beta*Htilde, zero}, (counter >= ts) && (Htilde > Hmin) && (Htrue >= Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // T_FT
-	// plm.new_transition(events[3], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + zero, Htrue, beta*Htilde, zero}, (counter >= ts) && (Htilde > Hmin) && (Htrue >= Hd) && (Htrue <= Hmax), Ariadne::EventKind::PERMISSIVE); // T_FF
-
-	// If H - deltaH <= Hmin then harvesting is always on, and H will never be > Hmax
-	// So every combination starting with F will have two dc at the end F * _ _
-
-	// sign(tau_tl) * abs(newH - Hmin / deltaQ);
-	// plm.new_transition(events[4], Ariadne::next({tau_pl, H, H_out, tau_tlc})={abs(mod_tau_tl), Hmin, zero, zero}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (tau_tl >= zero), Ariadne::EventKind::PERMISSIVE); // 
-	// plm.new_transition(events[5], Ariadne::next({tau_pl, H, H_out, tau_tlc})={minus_one * abs(mod_tau_tl), Hmin, zero, zero}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (tau_tl < zero), Ariadne::EventKind::PERMISSIVE); // 
-	// plm.new_transition(events[5], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FTTF
-	// plm.new_transition(events[6], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FTFT
-	// plm.new_transition(events[7], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FTFF
-	// plm.new_transition(events[8], Ariadne::next({tau_pl, H, H_out, tau_tlc})={zero, Hmin, zero, zero}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero), Ariadne::EventKind::PERMISSIVE); // FFTF
-	// plm.new_transition(events[9], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FFTT
-	// plm.new_transition(events[10], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FFFT
-	// plm.new_transition(events[11], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FFFF
-
 	return plm;
 }
 
@@ -341,9 +336,6 @@ Ariadne::HybridAutomaton PLS()
 	Ariadne::RealVariable tau_tl("tau_tls");
 	Ariadne::RealVariable tau_pl("tau_pls");
 	Ariadne::RealVariable deltaH_debug("deltaH_s");
-
-	// Ariadne::RealConstant ts("ts", Ariadne::Decimal(TS));
-	// Ariadne::RealVariable counter("cnt");
 
 	Ariadne::RealConstant zero("zero", Ariadne::Decimal(0));
 	Ariadne::RealConstant minus_one("minus_one", Ariadne::Decimal(-1.0));
@@ -394,11 +386,7 @@ Ariadne::HybridAutomaton PLS()
 	pls.new_transition(loc[1], events[2], loc[3], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE);
 	pls.new_transition(loc[1], events[3], loc[4], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (Htrue <= Hmax), Ariadne::EventKind::PERMISSIVE);
 
-	// pls.new_transition(loc[2], events[4], loc[5], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (deltaQ == Ariadne::Decimal(0.0001)), Ariadne::EventKind::PERMISSIVE);
-	// pls.new_transition(loc[2], events[5], loc[6], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (deltaQ != Ariadne::Decimal(0.0001)), Ariadne::EventKind::PERMISSIVE);
-
 	pls.new_transition(loc[2], events[4], loc[5], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (tau_tl > zero), Ariadne::EventKind::PERMISSIVE);
-	// pls.new_transition(loc[2], events[7], loc[8], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (Ariadne::RealExpression(tau_tl) == zero), Ariadne::EventKind::PERMISSIVE);
 	pls.new_transition(loc[2], events[5], loc[6], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (tau_tl <= zero), Ariadne::EventKind::PERMISSIVE);
 	
 	pls.new_transition(loc[6], events[6], loc[7], Ariadne::next({tau_pl, H, H_out, deltaH_debug}) = {tau_pl, H, H_out, deltaH_debug}, (tau_tl >= zero), Ariadne::EventKind::PERMISSIVE);
@@ -407,61 +395,84 @@ Ariadne::HybridAutomaton PLS()
 	// Clock transitions
 	pls.new_transition(loc[3], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, deltaH_debug})={tau_tl, Hmax, beta*Htilde, deltaH}); // Saturation ON
 	pls.new_transition(loc[4], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, deltaH_debug})={tau_tl, Htrue, beta*Htilde, deltaH}); // Saturation OFF
-	// pls.new_transition(loc[5], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, deltaH_debug})={zero, Hmin, zero, deltaH}); // No energy available and no movement 
 	pls.new_transition(loc[5], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, deltaH_debug})={abs(mod_tau_tl), Hmin, zero, deltaH}); // Reducing the torque, sign was positive
 	pls.new_transition(loc[7], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, deltaH_debug})={zero, Hmin, zero, deltaH}); // tau_tl was zero, therefore sign is zero
 	pls.new_transition(loc[8], clock_event, loc[0], Ariadne::next({tau_pl, H, H_out, deltaH_debug})={minus_one * abs(mod_tau_tl), Hmin, zero, deltaH}); // Reducing the torque, sign was negative
-
-	// pls.new_transition(events[1], Ariadne::next({tau_pl, H, H_out})={tau_tl, Hmax, beta*Htilde}, (counter >= ts) && (Htilde > Hmin) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE);
-	// pls.new_transition(events[1], Ariadne::next({tau_pl, H, H_out})={tau_tl, Htrue, beta*Htilde}, (counter >= ts) && (Htilde > Hmin) && (Htrue <= Hmax), Ariadne::EventKind::PERMISSIVE);
-
-	// sign(tau_tl) * abs(newH - Hmin / deltaQ);
-	// Ariadne::RealExpression mod_tau_tl = newH - Hmin / deltaQ;
-	// pls.new_transition(events[4], Ariadne::next({tau_pl, H, H_out})={abs(mod_tau_tl), Hmin, zero}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (tau_tl >= zero), Ariadne::EventKind::PERMISSIVE); // 
-	// pls.new_transition(events[5], Ariadne::next({tau_pl, H, H_out})={minus_one * abs(mod_tau_tl), Hmin, zero}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (tau_tl < zero), Ariadne::EventKind::PERMISSIVE); // 
-	// pls.new_transition(events[5], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FTTF
-	// pls.new_transition(events[6], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FTFT
-	// pls.new_transition(events[7], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ != zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FTFF
-	// pls.new_transition(events[8], Ariadne::next({tau_pl, H, H_out})={zero, Hmin, zero}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero), Ariadne::EventKind::PERMISSIVE); // FFTF
-	// plm.new_transition(events[9], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FFTT
-	// plm.new_transition(events[10], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FFFT
-	// plm.new_transition(events[11], Ariadne::next({tau_pl, H, H_out, tau_tlc})={tau_tl + tau_tlc_exp, Hmax, beta*Htilde, tau_tlc_exp}, (counter >= ts) && (Htilde <= Hmin) && (deltaQ == zero) && (Htrue < Hd) && (Htrue > Hmax), Ariadne::EventKind::PERMISSIVE); // FFFF
 
 	return pls;
 }
 
 Ariadne::HybridAutomaton CommunicationChannel()
-{
+{   
+    Ariadne::RealConstant MOD(Ariadne::Decimal(3.0));
+
 	// Passing to the other side the discretized values
 	Ariadne::RealVariable position_master("qm_d");
 	Ariadne::RealVariable velocity_master("qm_dot_d");
 	Ariadne::RealVariable position_slave("qs_d");
 	Ariadne::RealVariable velocity_slave("qs_dot_d");
-	
+	Ariadne::RealVariable H_out_m("H-m");
+	Ariadne::RealVariable H_out_s("H-s");
+    Ariadne::RealVariable rand_val("rand_seed");
+
 	Ariadne::RealVariable position_master_m2s("qm_m2s");
 	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
 	Ariadne::RealVariable position_slave_s2m("qs_s2m");
 	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
-
 	Ariadne::RealVariable H_in_m("H+m");
-	Ariadne::RealVariable H_out_m("H-m");
 	Ariadne::RealVariable H_in_s("H+s");
-	Ariadne::RealVariable H_out_s("H-s");
 
-	Ariadne::HybridAutomaton comm("comm_channel");
-	Ariadne::DiscreteLocation loc;
+    // To store previous values
+    Ariadne::RealVariable position_master_m2s_p("qm_m2s_p");
+	Ariadne::RealVariable velocity_master_m2s_p("qm_dot_m2s_p");
+	Ariadne::RealVariable position_slave_s2m_p("qs_s2m_p");
+	Ariadne::RealVariable velocity_slave_s2m_p("qs_dot_s2m_p");
+	Ariadne::RealVariable H_in_m_p("H+m_p");
+	Ariadne::RealVariable H_in_s_p("H+s_p");
+
+    Ariadne::StringVariable comm_name("cc");
+	Ariadne::HybridAutomaton comm(comm_name.name());
+
+    int n_locations = 3;
+	int n_events = 2;
+	Ariadne::DiscreteLocation loc[n_locations];
+	for (size_t i = 0; i < n_locations; i++)
+	{
+		loc[i] = Ariadne::DiscreteLocation(getPair(comm_name,"s" + std::to_string(i)));
+	}
 
 	Ariadne::DiscreteEvent clock_event("clock_event");
+    Ariadne::DiscreteEvent events[n_events];
+	for (size_t i = 0; i < n_events; i++)
+	{
+		events[i] = Ariadne::DiscreteEvent("cc_t" + std::to_string(i));
+	}
+    
+    comm.new_mode(loc[0], Ariadne::dot({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s})={0,0,0,0,0,0});
 
-	// comm.new_mode(loc, Ariadne::dot({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m}) = {0, 0, 0, 0});
-
-	// comm.new_transition(loc, clock_event, loc, Ariadne::next(
-	// 	{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m}) = 
-	// 	{position_master, velocity_master, position_slave, velocity_slave});
-
-	comm.new_mode(loc, Ariadne::let(
+	comm.new_mode(loc[1], Ariadne::let(
 		{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
 		{position_master, velocity_master, position_slave, velocity_slave, H_out_s, H_out_m});
+
+    comm.new_mode(loc[2], Ariadne::let(
+		{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
+		{position_master_m2s_p, velocity_master_m2s_p, position_slave_s2m_p, velocity_slave_s2m_p, H_in_m_p, H_in_s_p});
+
+    comm.new_transition(loc[0], events[0], loc[1], 
+        Ariadne::next({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) =
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
+        (rand_val % MOD == 0), // WON'T WORK
+        Ariadne::EventKind::PERMISSIVE);
+
+    comm.new_transition(loc[0], events[0], loc[2], 
+        Ariadne::next({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) =
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
+        (rand_val % MOD != 0), // WON'T WORK
+        Ariadne::EventKind::PERMISSIVE);
+
+    comm.new_transition(loc[1], clock_event, loc[0], Ariadne::next({position_master_m2s_p, velocity_master_m2s_p, position_slave_s2m_p, velocity_slave_s2m_p, H_in_m_p, H_in_s_p})={position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s});
+    comm.new_transition(loc[2], clock_event, loc[0], Ariadne::next({position_master_m2s_p, velocity_master_m2s_p, position_slave_s2m_p, velocity_slave_s2m_p, H_in_m_p, H_in_s_p})={position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s});
+
 	return comm;
 }
 
@@ -709,6 +720,12 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable deltaHm("deltaH_m");
 	Ariadne::RealVariable deltaHs("deltaH_s");
 
+    // // DEBUG RANDOM GENERATOR
+    // Ariadne::RealVariable rand_mod("rand_mod");
+    // Ariadne::RealVariable rand_a("rand_a");
+    // Ariadne::RealVariable rand_c("rand_c");
+    // Ariadne::RealVariable rand_seed("rand_seed");
+
 	Ariadne::HybridSimulator simulator;
 	simulator.set_step_size(STEP_SIZE);
 	simulator.verbosity = log_verbosity;
@@ -817,6 +834,7 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 		OneDelay(),
 		PLM(),
 		PLS()
+        // RandomGenerator()
 	});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
