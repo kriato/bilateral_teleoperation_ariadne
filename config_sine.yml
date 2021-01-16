@@ -1,5 +1,5 @@
 # ENVIRONMENT
-QE: 0.4
+QE: 10.4
 KE: 10.0
 BE: 0.5
 
@@ -50,4 +50,4 @@ HMIN: 0.0
 HD: 0.5
 ALPHA: 0.1
 BETA: 0.1
-H0: 0.4
+H0: 0.6

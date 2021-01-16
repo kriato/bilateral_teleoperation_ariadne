@@ -7,8 +7,8 @@
 #define PI Ariadne::pi
 
 // CHANGE THE DEFINE TO CHANGE THE TELEOPERATION INPUT
-#define SINE
-// #define STEP 
+// #define SINE
+#define STEP 
 
 template<typename T>
 void print(T in, bool newline = true)
@@ -222,25 +222,28 @@ Ariadne::HybridAutomaton OneDelay()
 	return one_delay;
 }
 
-Ariadne::HybridAutomaton RandomGenerator()
+Ariadne::HybridAutomaton LorentzSystem()
 {
-    Ariadne::RealVariable rand_mod("rand_mod");
-    Ariadne::RealVariable rand_a("rand_a");
-    Ariadne::RealVariable rand_c("rand_c");
-    Ariadne::RealVariable rand_seed("rand_seed");
+    Ariadne::RealConstant sigma(Ariadne::Decimal(10.0));
+    Ariadne::RealConstant beta(Ariadne::Decimal(2.6667));
+    Ariadne::RealConstant rho(Ariadne::Decimal(28.0));
 
-    Ariadne::HybridAutomaton rand_gen("rand_gen");
-    Ariadne::DiscreteLocation loc;
+    Ariadne::RealVariable x_rand("x_rand");
+    Ariadne::RealVariable y_rand("y_rand");
+    Ariadne::RealVariable z_rand("z_rand");
     
-    Ariadne::RealExpression var = rand_a * rand_seed + rand_c;
-    Ariadne::RealExpression d = REAL(INT(var / rand_mod)); //or REAL(FLOOR(var / rand_mod))
+    Ariadne::RealVariable rand("rand");
 
-    // dot = 0
+    Ariadne::HybridAutomaton lor("lor_sys");
+    Ariadne::DiscreteLocation loc;
 
-    // update on the reset, not with the dynamics of the location
-    rand_gen.new_mode(loc, Ariadne::let({rand_seed, rand_mod, rand_a, rand_c})={var - (rand_mod * d), rand_mod + 1, rand_a + 1, rand_c + 1});
+    Ariadne::DiscreteEvent clock_event("clock_event");
 
-    return rand_gen;
+    // [-sigma*a(1) + sigma*a(2); rho*a(1) - a(2) - a(1)*a(3); -beta*a(3) + a(1)*a(2)]
+    lor.new_mode(loc, Ariadne::dot({x_rand, y_rand, z_rand}) = {-sigma * x_rand + sigma * y_rand, rho * x_rand - y_rand - x_rand * z_rand, -beta * z_rand + x_rand * y_rand});
+    
+    lor.new_transition(loc, clock_event, loc, {Ariadne::next(rand)=z_rand});
+    return lor;
 }
 
 Ariadne::HybridAutomaton PLM()
@@ -404,7 +407,11 @@ Ariadne::HybridAutomaton PLS()
 
 Ariadne::HybridAutomaton CommunicationChannel()
 {   
-    Ariadne::RealConstant MOD(Ariadne::Decimal(3.0));
+    Ariadne::RealConstant lower(Ariadne::Decimal(0.9618));
+    Ariadne::RealConstant upper(Ariadne::Decimal(47.76));
+    Ariadne::RealConstant width(Ariadne::Decimal(46.7982));
+    Ariadne::RealConstant p(Ariadne::Decimal(0.6));
+    Ariadne::RealExpression threshold = lower + width * p;
 
 	// Passing to the other side the discretized values
 	Ariadne::RealVariable position_master("qm_d");
@@ -413,7 +420,7 @@ Ariadne::HybridAutomaton CommunicationChannel()
 	Ariadne::RealVariable velocity_slave("qs_dot_d");
 	Ariadne::RealVariable H_out_m("H-m");
 	Ariadne::RealVariable H_out_s("H-s");
-    Ariadne::RealVariable rand_val("rand_seed");
+    Ariadne::RealVariable rand_val("rand");
 
 	Ariadne::RealVariable position_master_m2s("qm_m2s");
 	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
@@ -421,19 +428,11 @@ Ariadne::HybridAutomaton CommunicationChannel()
 	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
 	Ariadne::RealVariable H_in_m("H+m");
 	Ariadne::RealVariable H_in_s("H+s");
-
-    // To store previous values
-    Ariadne::RealVariable position_master_m2s_p("qm_m2s_p");
-	Ariadne::RealVariable velocity_master_m2s_p("qm_dot_m2s_p");
-	Ariadne::RealVariable position_slave_s2m_p("qs_s2m_p");
-	Ariadne::RealVariable velocity_slave_s2m_p("qs_dot_s2m_p");
-	Ariadne::RealVariable H_in_m_p("H+m_p");
-	Ariadne::RealVariable H_in_s_p("H+s_p");
-
+    
     Ariadne::StringVariable comm_name("cc");
 	Ariadne::HybridAutomaton comm(comm_name.name());
 
-    int n_locations = 3;
+    int n_locations = 2;
 	int n_events = 2;
 	Ariadne::DiscreteLocation loc[n_locations];
 	for (size_t i = 0; i < n_locations; i++)
@@ -448,32 +447,29 @@ Ariadne::HybridAutomaton CommunicationChannel()
 		events[i] = Ariadne::DiscreteEvent("cc_t" + std::to_string(i));
 	}
     
-    comm.new_mode(loc[0], Ariadne::dot({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s})={0,0,0,0,0,0});
+	comm.new_mode(loc[1], Ariadne::dot(
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
+        {0,0,0,0,0,0});
 
-	comm.new_mode(loc[1], Ariadne::let(
-		{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
-		{position_master, velocity_master, position_slave, velocity_slave, H_out_s, H_out_m});
-
-    comm.new_mode(loc[2], Ariadne::let(
-		{position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
-		{position_master_m2s_p, velocity_master_m2s_p, position_slave_s2m_p, velocity_slave_s2m_p, H_in_m_p, H_in_s_p});
+    comm.new_mode(loc[0], Ariadne::let(
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
+        {position_master, velocity_master, position_slave, velocity_slave, H_out_s, H_out_m});
 
     comm.new_transition(loc[0], events[0], loc[1], 
-        Ariadne::next({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) =
+        Ariadne::next(
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
         {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
-        (rand_val % MOD == 0), // WON'T WORK
-        Ariadne::EventKind::PERMISSIVE);
+        (rand_val > threshold), 
+        Ariadne::EventKind::URGENT);
 
-    comm.new_transition(loc[0], events[0], loc[2], 
-        Ariadne::next({position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) =
-        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
-        (rand_val % MOD != 0), // WON'T WORK
-        Ariadne::EventKind::PERMISSIVE);
-
-    comm.new_transition(loc[1], clock_event, loc[0], Ariadne::next({position_master_m2s_p, velocity_master_m2s_p, position_slave_s2m_p, velocity_slave_s2m_p, H_in_m_p, H_in_s_p})={position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s});
-    comm.new_transition(loc[2], clock_event, loc[0], Ariadne::next({position_master_m2s_p, velocity_master_m2s_p, position_slave_s2m_p, velocity_slave_s2m_p, H_in_m_p, H_in_s_p})={position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s});
-
-	return comm;
+    comm.new_transition(loc[1], events[1], loc[0],
+        // OverspecifiedResetError 
+        // Ariadne::next(   
+        // {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
+        // {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
+        (rand_val <= threshold),
+        Ariadne::EventKind::URGENT);
+    return comm;
 }
 
 Ariadne::HybridAutomaton Environment()
@@ -524,7 +520,6 @@ Ariadne::HybridAutomaton TLM()
 	tlm.new_mode(loc, Ariadne::let({torque}) = {(position_master - position_slave_s2m) * P + (velocity_master - velocity_slave_s2m) * D});
 
 	// tlm.new_mode(loc, Ariadne::dot({torque}) = {0});
-
 	// tlm.new_transition(loc, clock_event, loc, Ariadne::next({torque}) = {(position_master - position_slave_s2m) * P + (velocity_master - velocity_slave_s2m) * D});
 
 	return tlm;
@@ -712,19 +707,16 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable counter("cnt");
 
 	Ariadne::RealVariable H_m("Hm");
-	Ariadne::RealVariable H_in_m("H+m");
 	Ariadne::RealVariable H_out_m("H-m");
 	Ariadne::RealVariable H_s("Hs");
-	Ariadne::RealVariable H_in_s("H+s");
-	Ariadne::RealVariable H_out_s("H-s");
+    Ariadne::RealVariable H_out_s("H-s");
 	Ariadne::RealVariable deltaHm("deltaH_m");
 	Ariadne::RealVariable deltaHs("deltaH_s");
 
-    // // DEBUG RANDOM GENERATOR
-    // Ariadne::RealVariable rand_mod("rand_mod");
-    // Ariadne::RealVariable rand_a("rand_a");
-    // Ariadne::RealVariable rand_c("rand_c");
-    // Ariadne::RealVariable rand_seed("rand_seed");
+    Ariadne::RealVariable x_rand("x_rand");
+    Ariadne::RealVariable y_rand("y_rand");
+    Ariadne::RealVariable z_rand("z_rand");
+    Ariadne::RealVariable rand("rand");
 
 	Ariadne::HybridSimulator simulator;
 	simulator.set_step_size(STEP_SIZE);
@@ -735,7 +727,8 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			getPair("env","free_motion"),
 			getPair("human_intention", "low"),
 			getPair("pls","s0"),
-			getPair("plm","s0")
+			getPair("plm","s0"),
+            getPair("cc", "s0")
 		},
 		{
 			position_master = 0, 
@@ -759,7 +752,11 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			H_s = Ariadne::Decimal(H0),
 			H_out_s = 0,
 			deltaHm = 0,
-			deltaHs = 0
+			deltaHs = 0,
+            x_rand = 1,
+            y_rand = 1,
+            z_rand = 1,
+            rand = 0
 		}
 	);
 
@@ -804,9 +801,7 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	plot("plots/H_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_m<=ymax),orbit);
 	plot("plots/H_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_s<=ymax),orbit);
 
-	plot("plots/H_in_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_in_m<=ymax),orbit);
 	plot("plots/H_out_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_out_m<=ymax),orbit);
-	plot("plots/H_in_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_in_s<=ymax),orbit);
 	plot("plots/H_out_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_out_s<=ymax),orbit);
 
 	std::cout << "done!\n" << std::endl;
@@ -833,8 +828,8 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 		Time(),
 		OneDelay(),
 		PLM(),
-		PLS()
-        // RandomGenerator()
+		PLS(),
+        LorentzSystem()
 	});
 	
 	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());

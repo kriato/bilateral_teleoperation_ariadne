@@ -43,7 +43,9 @@ values = np.loadtxt(StringIO(whole), delimiter=',')
 print(values.shape)
 
 # CHECK THE ORDER
-labels = ['q_dot_ref','q_ref','qs_dot','qs','qm_dot','qm','qm_d','qs_d','qm_dot_d','qs_dot_d','fe_d','cnt','t','qs_d_prev','qm_d_prev','tau_plm','Hm','Hm_out','tau_tlc','deltaH_m','tau_pls','Hs','Hs_out','deltaH_s','fe','qm_m2s','qm_dot_m2s','tau_tls','qs_s2m','qs_dot_s2m','h_m_star','tau_tlm','H+m','H+s']
+labels = ['q_dot_ref','q_ref','qs_dot','qs','qm_dot','qm','qm_m2s','qm_dot_m2s','qs_s2m','qs_dot_s2m','H_in_m','H_in_s','qm_m2s_p','qm_dot_m2s_p','qs_s2m_p','qs_dot_s2m_p','H_in_m_p',
+            'H_in_s_p','qm_d','qs_d','qm_dot_d','qs_dot_d','fe_d','cnt','t','qs_d_prev','qm_d_prev','tau_plm','Hm','H-m','tau_tlc','deltaH_m','tau_pls','Hs','H-s','deltaH_s','x_rand',
+            'y_rand','z_rand','h_m_star','tau_tlm','tau_tls','fe']
 
 assert(len(labels) == values.shape[1])
 
