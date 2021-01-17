@@ -679,7 +679,7 @@ Ariadne::HybridAutomaton Time()
 	return time;
 }
 
-Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system, const Nat& log_verbosity)
+Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system)
 {
 	Ariadne::RealVariable position_master("qm");
 	Ariadne::RealVariable velocity_master("qm_dot");
@@ -720,7 +720,6 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 
 	Ariadne::HybridSimulator simulator;
 	simulator.set_step_size(STEP_SIZE);
-	simulator.verbosity = log_verbosity;
 
 	Ariadne::HybridRealPoint initial_point(
 		{
@@ -767,11 +766,21 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 
 	Ariadne::HybridTerminationCriterion termination(tf_c, tf_d);
 
-	std::cout << "Computing simulation trajectory...\n" << std::flush;
+    // Dont't look here :)
+	{
+        using namespace Ariadne;
+        ARIADNE_LOG_PRINTLN("Computing simulation trajectory...");
+    }
+        
 	auto orbit = simulator.orbit(system,initial_point,termination);
-	std::cout << "done!\n" << std::endl;
 	
-	std::cout << "Logging to file: " + LOG_FILE << std::endl;
+    // Dont't look here :)
+    {
+        using namespace Ariadne;
+        ARIADNE_LOG_PRINTLN("done!");
+	    ARIADNE_LOG_PRINTLN("Logging to file: " + LOG_FILE);
+    }
+
 	std::ofstream log_file;
     log_file.open (LOG_FILE);
     log_file << orbit << std::endl;
@@ -803,15 +812,15 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 
 	plot("plots/H_out_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_out_m<=ymax),orbit);
 	plot("plots/H_out_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_out_s<=ymax),orbit);
-
-	std::cout << "done!\n" << std::endl;
 }
 
 Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 {	
 	load_settings();
 	
-	Ariadne::Nat log_verbosity = Ariadne::get_verbosity(argc, argv);
+    Ariadne::Logger::configuration().set_theme(Ariadne::TT_THEME_DARK);
+    Ariadne::Logger::configuration().set_verbosity(Ariadne::get_verbosity(argc, argv));
+	// Ariadne::Nat log_verbosity = Ariadne::get_verbosity(argc, argv);
 	
 	Ariadne::CompositeHybridAutomaton system("system", 
 	{
@@ -832,9 +841,16 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
         LorentzSystem()
 	});
 	
-	Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
-	std::cout << "\nSystem:\n\n" << system << std::endl;
-	simulate_evolution(system,log_verbosity);
+	// Ariadne::CompositeHybridAutomaton::set_default_writer(new Ariadne::CompactCompositeHybridAutomatonWriter());
+	Ariadne::CompositeHybridAutomaton::set_default_writer(Ariadne::CompactCompositeHybridAutomatonWriter());
+    
+    // Dont't look here :)
+    {
+        using namespace Ariadne;
+        ARIADNE_LOG_PRINTLN("System: " << system);
+    }
+
+	simulate_evolution(system);
 
 	return 0;
 }
