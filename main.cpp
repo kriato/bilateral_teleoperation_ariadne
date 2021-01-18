@@ -7,8 +7,8 @@
 #define PI Ariadne::pi
 
 // CHANGE THE DEFINE TO CHANGE THE TELEOPERATION INPUT
-#define SINE
-// #define STEP
+// #define SINE
+#define STEP
 #define WORKING #for working branch
 
 #ifdef WORKING
@@ -247,7 +247,8 @@ Ariadne::HybridAutomaton LorentzSystem()
     // [-sigma*a(1) + sigma*a(2); rho*a(1) - a(2) - a(1)*a(3); -beta*a(3) + a(1)*a(2)]
     lor.new_mode(loc, Ariadne::dot({x_rand, y_rand, z_rand, rand}) = {-sigma * x_rand + sigma * y_rand, rho * x_rand - y_rand - x_rand * z_rand, -beta * z_rand + x_rand * y_rand, 0});
     
-    lor.new_transition(loc, clock_event, loc, {Ariadne::next(rand)=z_rand});
+    // Adding this transition breaks everything
+    // lor.new_transition(loc, clock_event, loc, Ariadne::next({rand, x_rand, y_rand, z_rand})={z_rand, x_rand, y_rand, z_rand});
     return lor;
 }
 
@@ -412,9 +413,9 @@ Ariadne::HybridAutomaton PLS()
 
 Ariadne::HybridAutomaton CommunicationChannel()
 {   
-    Ariadne::RealConstant lower(Ariadne::Decimal(0.9618));
-    Ariadne::RealConstant upper(Ariadne::Decimal(47.76));
-    Ariadne::RealConstant width(Ariadne::Decimal(46.7982));
+    Ariadne::RealConstant lower(Ariadne::Decimal(0.9623));
+    Ariadne::RealConstant upper(Ariadne::Decimal(47.8801));
+    Ariadne::RealConstant width(Ariadne::Decimal(46.9177));
     Ariadne::RealConstant p(Ariadne::Decimal(0.6));
     Ariadne::RealExpression threshold = lower + width * p;
 
@@ -465,7 +466,7 @@ Ariadne::HybridAutomaton CommunicationChannel()
         {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
         {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
         (rand_val > threshold), 
-        Ariadne::EventKind::URGENT);
+        Ariadne::EventKind::PERMISSIVE);
 
     comm.new_transition(loc[1], events[1], loc[0],
         // OverspecifiedResetError 
@@ -473,7 +474,7 @@ Ariadne::HybridAutomaton CommunicationChannel()
         // {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
         // {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
         (rand_val <= threshold),
-        Ariadne::EventKind::URGENT);
+        Ariadne::EventKind::PERMISSIVE);
     return comm;
 }
 

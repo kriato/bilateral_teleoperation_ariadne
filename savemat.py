@@ -9,7 +9,7 @@ subs = []
 for n in range(0,len(idx)-1):
     subs.append(content[idx[n]:idx[n+1]])
 
-# f = open('values.txt', 'w')
+# f = open('values.csv', 'w')
 all_ts = []
 all_val = []
 whole = ''
@@ -32,7 +32,7 @@ for index, (t,val) in enumerate(zip(all_ts,all_val)):
     except IndexError:
         # print('passing')
         pass
-    # f.write(t + ' | ' + val + '\n')
+    # f.write(t + ',' + val + '\n')
     whole += val + '\n'
 # f.close()
 
@@ -43,9 +43,8 @@ values = np.loadtxt(StringIO(whole), delimiter=',')
 print(values.shape)
 
 # CHECK THE ORDER
-labels = ['q_dot_ref','q_ref','qs_dot','qs','qm_dot','qm','qm_m2s','qm_dot_m2s','qs_s2m','qs_dot_s2m','H_in_m','H_in_s','qm_m2s_p','qm_dot_m2s_p','qs_s2m_p','qs_dot_s2m_p','H_in_m_p',
-            'H_in_s_p','qm_d','qs_d','qm_dot_d','qs_dot_d','fe_d','cnt','t','qs_d_prev','qm_d_prev','tau_plm','Hm','H-m','tau_tlc','deltaH_m','tau_pls','Hs','H-s','deltaH_s','x_rand',
-            'y_rand','z_rand','h_m_star','tau_tlm','tau_tls','fe']
+labels = ['q_dot_ref','q_ref','qs_dot','qs','qm_dot','qm','qm_d','qs_d','qm_dot_d','qs_dot_d','fe_d','cnt','t','qs_d_prev','qm_d_prev','tau_plm','Hm','H-m','tau_tlc','deltaH_m','tau_pls','Hs',
+            'H-s','deltaH_s','x_rand','y_rand','z_rand','rand','fe','qm_m2s','qm_dot_m2s','tau_tls','qs_s2m','qs_dot_s2m','h_m_star','tau_tlm','H+m','H+s']
 
 assert(len(labels) == values.shape[1])
 
@@ -54,6 +53,7 @@ for val, label in zip(values.T, labels):
     matfile[label]=val
 sio.savemat('build/bin/values.mat', matfile)
 
+print(max(matfile['Hm']))
 #Import plotly
 
 import plotly.graph_objs as go
@@ -124,4 +124,4 @@ app.layout = html.Div(children=[
     ])
 ], style={'textAlign': 'center'})
 
-app.run_server(debug=True, use_reloader=False)
+app.run_server(host='localhost', debug=True)
