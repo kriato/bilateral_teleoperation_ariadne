@@ -7,8 +7,8 @@
 #define PI Ariadne::pi
 
 // CHANGE THE DEFINE TO CHANGE THE TELEOPERATION INPUT
-// #define SINE
-#define STEP
+#define SINE
+// #define STEP
 #define WORKING #for working branch
 
 #ifdef WORKING
@@ -237,18 +237,14 @@ Ariadne::HybridAutomaton LorentzSystem()
     Ariadne::RealVariable y_rand("y_rand");
     Ariadne::RealVariable z_rand("z_rand");
     
-    Ariadne::RealVariable rand("rand");
-
     Ariadne::HybridAutomaton lor("lor_sys");
     Ariadne::DiscreteLocation loc;  
 
     Ariadne::DiscreteEvent clock_event("clock_event");
 
     // [-sigma*a(1) + sigma*a(2); rho*a(1) - a(2) - a(1)*a(3); -beta*a(3) + a(1)*a(2)]
-    lor.new_mode(loc, Ariadne::dot({x_rand, y_rand, z_rand, rand}) = {-sigma * x_rand + sigma * y_rand, rho * x_rand - y_rand - x_rand * z_rand, -beta * z_rand + x_rand * y_rand, 0});
+    lor.new_mode(loc, Ariadne::dot({x_rand, y_rand, z_rand}) = {-sigma * x_rand + sigma * y_rand, rho * x_rand - y_rand - x_rand * z_rand, -beta * z_rand + x_rand * y_rand});
     
-    // Adding this transition breaks everything
-    // lor.new_transition(loc, clock_event, loc, Ariadne::next({rand, x_rand, y_rand, z_rand})={z_rand, x_rand, y_rand, z_rand});
     return lor;
 }
 
@@ -416,7 +412,7 @@ Ariadne::HybridAutomaton CommunicationChannel()
     Ariadne::RealConstant lower(Ariadne::Decimal(0.9623));
     Ariadne::RealConstant upper(Ariadne::Decimal(47.8801));
     Ariadne::RealConstant width(Ariadne::Decimal(46.9177));
-    Ariadne::RealConstant p(Ariadne::Decimal(0.6));
+    Ariadne::RealConstant p(Ariadne::Decimal(0.62));
     Ariadne::RealExpression threshold = lower + width * p;
 
 	// Passing to the other side the discretized values
@@ -426,7 +422,7 @@ Ariadne::HybridAutomaton CommunicationChannel()
 	Ariadne::RealVariable velocity_slave("qs_dot_d");
 	Ariadne::RealVariable H_out_m("H-m");
 	Ariadne::RealVariable H_out_s("H-s");
-    Ariadne::RealVariable rand_val("rand");
+    Ariadne::RealVariable rand_val("z_rand");
 
 	Ariadne::RealVariable position_master_m2s("qm_m2s");
 	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
@@ -438,7 +434,7 @@ Ariadne::HybridAutomaton CommunicationChannel()
     Ariadne::StringVariable comm_name("cc");
 	Ariadne::HybridAutomaton comm(comm_name.name());
 
-    int n_locations = 2;
+    int n_locations = 3;
 	int n_events = 2;
 	Ariadne::DiscreteLocation loc[n_locations];
 	for (size_t i = 0; i < n_locations; i++)
@@ -453,11 +449,15 @@ Ariadne::HybridAutomaton CommunicationChannel()
 		events[i] = Ariadne::DiscreteEvent("cc_t" + std::to_string(i));
 	}
     
+    comm.new_mode(loc[0], Ariadne::dot(
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
+        {0,0,0,0,0,0});
+
 	comm.new_mode(loc[1], Ariadne::dot(
         {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
         {0,0,0,0,0,0});
 
-    comm.new_mode(loc[0], Ariadne::let(
+    comm.new_mode(loc[2], Ariadne::let(
         {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
         {position_master, velocity_master, position_slave, velocity_slave, H_out_s, H_out_m});
 
@@ -468,13 +468,21 @@ Ariadne::HybridAutomaton CommunicationChannel()
         (rand_val > threshold), 
         Ariadne::EventKind::PERMISSIVE);
 
-    comm.new_transition(loc[1], events[1], loc[0],
+    comm.new_transition(loc[0], events[1], loc[2],
         // OverspecifiedResetError 
         // Ariadne::next(   
         // {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
         // {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s},
         (rand_val <= threshold),
         Ariadne::EventKind::PERMISSIVE);
+
+    comm.new_transition(loc[1], clock_event, loc[0], Ariadne::next(
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s});
+    comm.new_transition(loc[2], clock_event, loc[0], Ariadne::next(
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s}) = 
+        {position_master_m2s, velocity_master_m2s, position_slave_s2m, velocity_slave_s2m, H_in_m, H_in_s});
+
     return comm;
 }
 
@@ -729,7 +737,13 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
     Ariadne::RealVariable x_rand("x_rand");
     Ariadne::RealVariable y_rand("y_rand");
     Ariadne::RealVariable z_rand("z_rand");
-    Ariadne::RealVariable rand("rand");
+
+    Ariadne::RealVariable position_master_m2s("qm_m2s");
+	Ariadne::RealVariable velocity_master_m2s("qm_dot_m2s");
+	Ariadne::RealVariable position_slave_s2m("qs_s2m");
+	Ariadne::RealVariable velocity_slave_s2m("qs_dot_s2m");
+	Ariadne::RealVariable H_in_m("H+m");
+	Ariadne::RealVariable H_in_s("H+s");
 
 	Ariadne::HybridSimulator simulator;
 	simulator.set_step_size(STEP_SIZE);
@@ -760,7 +774,7 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			velocity_slave_d = 0,
             position_slave_d_prev = 0,
             position_master_d_prev = 0,
-			env_force_d=0,
+			env_force_d = 0,
 			counter = 0,
 			torque_plm = 0,
 			torque_pls = 0,
@@ -774,7 +788,12 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
             x_rand = 1,
             y_rand = 1,
             z_rand = 1,
-            rand = 0
+            position_master_m2s = 0,
+            velocity_master_m2s = 0,
+            position_slave_s2m = 0,
+            velocity_slave_s2m = 0,
+            H_in_m = 0,
+            H_in_s = 0
 		}
 	);
 
@@ -791,7 +810,6 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
         print("Computing simulation trajectory...");
     #endif
 	auto orbit = simulator.orbit(system,initial_point,termination);
-    
     
     #ifdef WORKING
         ARIADNE_LOG_PRINTLN("done!");
@@ -834,7 +852,6 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	plot("plots/torque_tlc",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=torque_tlc<=ymax),orbit);
 	plot("plots/H_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_m<=ymax),orbit);
 	plot("plots/H_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_s<=ymax),orbit);
-
 	plot("plots/H_out_m",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_out_m<=ymax),orbit);
 	plot("plots/H_out_s",Ariadne::Axes2d(0<=Ariadne::TimeVariable()<= tf_c, ymin <=H_out_s<=ymax),orbit);
 }
