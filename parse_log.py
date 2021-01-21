@@ -22,12 +22,12 @@ for n in range(0,len(idx)-1):
 import numpy as np
 events_tmp = np.asarray(events_tmp)
 
-events = {}
-events['CC'] = events_tmp[:,0]
-events['ENV'] = events_tmp[:,1]
-events['HI'] = events_tmp[:,2]
-events['PLM'] = events_tmp[:,3]
-events['PLS'] = events_tmp[:,4]
+# events = {}
+# events['CC'] = events_tmp[:,0]
+# events['ENV'] = events_tmp[:,1]
+# events['HI'] = events_tmp[:,2]
+# events['PLM'] = events_tmp[:,3]
+# events['PLS'] = events_tmp[:,4]
 
 # f = open('values.csv', 'w')
 all_ts = []
@@ -74,7 +74,7 @@ values = np.loadtxt(StringIO(whole), delimiter=',')
 print(values.shape)
 
 # CHECK THE ORDER
-labels = ['H+m', 'H+s', 'H-m', 'H-s', 'Hm', 'Hs', 'cnt', 'deltaH_m', 'deltaH_s', 'fe', 'fe_d', 'h_m_star', 'q_dot_ref', 'q_ref', 'qm', 'qm_d', 'qm_d_prev', 'qm_dot', 'qm_dot_d', 'qm_dot_m2s', 'qm_m2s', 'qs', 'qs_d', 'qs_d_prev', 'qs_dot', 'qs_dot_d', 'qs_dot_s2m', 'qs_s2m', 't', 'tau_plm', 'tau_pls', 'tau_tlc', 'tau_tlm', 'tau_tls', 'x_rand', 'y_rand', 'z_rand']
+labels = ['H+m', 'H+s', 'H-m', 'H-s', 'Hm', 'Hs', 'cnt', 'deltaH_m', 'deltaH_s', 'fe', 'fe_d', 'h_m_star', 'id_m2s', 'id_s2m', 'm_out_Hm', 'm_out_id', 'm_out_qm', 'm_out_qm_dot', 'p0_mr_Hm', 'p0_mr_id', 'p0_mr_qm', 'p0_mr_qm_dot', 'p0_ms_Hm', 'p0_ms_id', 'p0_ms_qm', 'p0_ms_qm_dot', 'p0_sr_Hs', 'p0_sr_id', 'p0_sr_qs', 'p0_sr_qs_dot', 'p0_ss_Hs', 'p0_ss_id', 'p0_ss_qs', 'p0_ss_qs_dot', 'p_cnt', 'q_dot_ref', 'q_ref', 'qm', 'qm_d', 'qm_d_prev', 'qm_dot', 'qm_dot_d', 'qm_dot_m2s', 'qm_m2s', 'qs', 'qs_d', 'qs_d_prev', 'qs_dot', 'qs_dot_d', 'qs_dot_s2m', 'qs_s2m', 's_out_Hs', 's_out_id', 's_out_qs', 's_out_qs_dot', 't', 'tau_plm', 'tau_pls', 'tau_tlc', 'tau_tlm', 'tau_tls']
 
 for var in final_ordered_vars:
     assert(var, labels)
