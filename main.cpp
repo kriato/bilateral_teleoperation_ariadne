@@ -664,21 +664,21 @@ Ariadne::HybridAutomaton MasterSideReorder()
 
 	Ariadne::RealVariable t("t");
 
-	Ariadne::RealVariable in_id("m_out_id");
-	Ariadne::RealVariable in_q("m_out_qm");
-	Ariadne::RealVariable in_q_dot("m_out_qm_dot");
-	Ariadne::RealVariable in_H("m_out_Hm");
+	Ariadne::RealVariable in_id("s_out_id");
+	Ariadne::RealVariable in_q("s_out_qs");
+	Ariadne::RealVariable in_q_dot("s_out_qs_dot");
+	Ariadne::RealVariable in_H("s_out_Hs");
 
 	Ariadne::RealVariable p0_id("p0_mr_id");
-	Ariadne::RealVariable p0_q("p0_mr_qm");
-	Ariadne::RealVariable p0_q_dot("p0_mr_qm_dot");
-	Ariadne::RealVariable p0_H("p0_mr_Hm");
+	Ariadne::RealVariable p0_q("p0_mr_qs");
+	Ariadne::RealVariable p0_q_dot("p0_mr_qs_dot");
+	Ariadne::RealVariable p0_H("p0_mr_Hs");
 
-	Ariadne::RealVariable id_m2s("id_m2s");
-	Ariadne::RealVariable p_m2s("qm_m2s");
-	Ariadne::RealVariable v_m2s("qm_dot_m2s");
-	Ariadne::RealVariable H_m2s("H+m");
-	
+	Ariadne::RealVariable id_s2m("id_s2m");
+	Ariadne::RealVariable p_s2m("qs_s2m");
+	Ariadne::RealVariable v_s2m("qs_dot_s2m");
+	Ariadne::RealVariable H_s2m("H+m");
+
 	Ariadne::StringVariable aut_name("msr");
 	Ariadne::HybridAutomaton aut(aut_name.name());
 	Ariadne::DiscreteLocation loc[n_locations];
@@ -696,36 +696,36 @@ Ariadne::HybridAutomaton MasterSideReorder()
 	Ariadne::DiscreteEvent clock_event("clock_event");
 
 	aut.new_mode(loc[0], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
 		{0,0,0,0,0,0,0,0});
 
 	aut.new_mode(loc[1], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
 		{0,0,0,0,0,0,0,0});
 
 	aut.new_mode(loc[2], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
 		{0,0,0,0,0,0,0,0});
 
 	// Save input packet in the buffer, not changing the output values
 	aut.new_transition(loc[0], clock_event, loc[1], 
 		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{in_id, in_q, in_q_dot, in_H, p_m2s, v_m2s, H_m2s, id_m2s}
+			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+			{in_id, in_q, in_q_dot, in_H, p_s2m, v_s2m, H_s2m, id_s2m}
 	);
 	
 	aut.new_transition(loc[1], events[0], loc[2], 
 		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id},
+			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
 		(t > 0),
 		Ariadne::EventKind::PERMISSIVE
 	);
-	
+
 	aut.new_transition(loc[2], clock_event, loc[0], 
 		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id}
+			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id}
 	);
 
 	return aut;
@@ -811,20 +811,20 @@ Ariadne::HybridAutomaton SlaveSideReorder()
 
 	Ariadne::RealVariable t("t");
 
-	Ariadne::RealVariable in_id("s_out_id");
-	Ariadne::RealVariable in_q("s_out_qs");
-	Ariadne::RealVariable in_q_dot("s_out_qs_dot");
-	Ariadne::RealVariable in_H("s_out_Hs");
-
+	Ariadne::RealVariable in_id("m_out_id");
+	Ariadne::RealVariable in_q("m_out_qm");
+	Ariadne::RealVariable in_q_dot("m_out_qm_dot");
+	Ariadne::RealVariable in_H("m_out_Hm");
+	
 	Ariadne::RealVariable p0_id("p0_sr_id");
-	Ariadne::RealVariable p0_q("p0_sr_qs");
-	Ariadne::RealVariable p0_q_dot("p0_sr_qs_dot");
-	Ariadne::RealVariable p0_H("p0_sr_Hs");
+	Ariadne::RealVariable p0_q("p0_sr_qm");
+	Ariadne::RealVariable p0_q_dot("p0_sr_qm_dot");
+	Ariadne::RealVariable p0_H("p0_sr_Hm");
 
-	Ariadne::RealVariable id_s2m("id_s2m");
-	Ariadne::RealVariable p_s2m("qs_s2m");
-	Ariadne::RealVariable v_s2m("qs_dot_s2m");
-	Ariadne::RealVariable H_s2m("H+s");
+	Ariadne::RealVariable id_m2s("id_m2s");
+	Ariadne::RealVariable p_m2s("qm_m2s");
+	Ariadne::RealVariable v_m2s("qm_dot_m2s");
+	Ariadne::RealVariable H_m2s("H+s");
 
 	Ariadne::StringVariable aut_name("ssr");
 	Ariadne::HybridAutomaton aut(aut_name.name());
@@ -843,36 +843,39 @@ Ariadne::HybridAutomaton SlaveSideReorder()
 	Ariadne::DiscreteEvent clock_event("clock_event");
 
 	aut.new_mode(loc[0], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
 		{0,0,0,0,0,0,0,0});
 
 	aut.new_mode(loc[1], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
 		{0,0,0,0,0,0,0,0});
 
 	aut.new_mode(loc[2], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
 		{0,0,0,0,0,0,0,0});
 
 	// Save input packet in the buffer, not changing the output values
 	aut.new_transition(loc[0], clock_event, loc[1], 
 		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{in_id, in_q, in_q_dot, in_H, p_s2m, v_s2m, H_s2m, id_s2m}
+			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+			{in_id, in_q, in_q_dot, in_H, p_m2s, v_m2s, H_m2s, id_m2s}
 	);
 	
+	// Butto in output quello che ho in input
 	aut.new_transition(loc[1], events[0], loc[2], 
 		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id},
+			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
+			// {p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+			// {p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id, },
 		(t > 0),
 		Ariadne::EventKind::PERMISSIVE
 	);
 	
 	aut.new_transition(loc[2], clock_event, loc[0], 
 		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id}
+			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id}
 	);
 
 	return aut;
@@ -1148,18 +1151,21 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable p0_ms_qm("p0_ms_qm");
 	Ariadne::RealVariable p0_ms_qm_dot("p0_ms_qm_dot");
 	Ariadne::RealVariable p0_ms_Hm("p0_ms_Hm");
+	
 	Ariadne::RealVariable p0_mr_id("p0_mr_id");
-	Ariadne::RealVariable p0_mr_qm("p0_mr_qm");
-	Ariadne::RealVariable p0_mr_qm_dot("p0_mr_qm_dot");
-	Ariadne::RealVariable p0_mr_Hm("p0_mr_Hm");
+	Ariadne::RealVariable p0_mr_qs("p0_mr_qs");
+	Ariadne::RealVariable p0_mr_qs_dot("p0_mr_qs_dot");
+	Ariadne::RealVariable p0_mr_Hs("p0_mr_Hs");
+
 	Ariadne::RealVariable p0_ss_id("p0_ss_id");
 	Ariadne::RealVariable p0_ss_qs("p0_ss_qs");
 	Ariadne::RealVariable p0_ss_qs_dot("p0_ss_qs_dot");
 	Ariadne::RealVariable p0_ss_Hs("p0_ss_Hs");
+
 	Ariadne::RealVariable p0_sr_id("p0_sr_id");
-	Ariadne::RealVariable p0_sr_qs("p0_sr_qs");
-	Ariadne::RealVariable p0_sr_qs_dot("p0_sr_qs_dot");
-	Ariadne::RealVariable p0_sr_Hs("p0_sr_Hs");
+	Ariadne::RealVariable p0_sr_qm("p0_sr_qm");
+	Ariadne::RealVariable p0_sr_qm_dot("p0_sr_qm_dot");
+	Ariadne::RealVariable p0_sr_Hm("p0_sr_Hm");
 
 	Ariadne::RealVariable m_out_id("m_out_id");
 	Ariadne::RealVariable m_out_qm("m_out_qm");
@@ -1223,32 +1229,32 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			velocity_master_m2s = 0,
 			position_slave_s2m = 0,
 			velocity_slave_s2m = 0,
-			id_m2s = 0,
-			id_s2m = 0,
+			id_m2s = -1,
+			id_s2m = -1,
 
 			H_in_m = 0,
 			H_in_s = 0,
-			p0_ms_id = 0,
+			p0_ms_id = -1,
 			p0_ms_qm = 0,
 			p0_ms_qm_dot = 0,
 			p0_ms_Hm = 0,
-			p0_mr_id = 0,
-			p0_mr_qm = 0,
-			p0_mr_qm_dot = 0,
-			p0_mr_Hm = 0,
-			p0_ss_id = 0,
+			p0_mr_id = -1,
+			p0_mr_qs = 0,
+			p0_mr_qs_dot = 0,
+			p0_mr_Hs = 0,
+			p0_ss_id = -1,
 			p0_ss_qs = 0,
 			p0_ss_qs_dot = 0,
 			p0_ss_Hs = 0,
-			p0_sr_id = 0,
-			p0_sr_qs = 0,
-			p0_sr_qs_dot = 0,
-			p0_sr_Hs = 0,
-			m_out_id = 0,
+			p0_sr_id = -1,
+			p0_sr_qm = 0,
+			p0_sr_qm_dot = 0,
+			p0_sr_Hm = 0,
+			m_out_id = -1,
 			m_out_qm = 0,
 			m_out_qm_dot = 0,
 			m_out_Hm = 0,
-			s_out_id = 0,
+			s_out_id = -1,
 			s_out_qs = 0,
 			s_out_qs_dot = 0,
 			s_out_Hs = 0
