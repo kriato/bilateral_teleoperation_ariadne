@@ -659,7 +659,7 @@ Ariadne::HybridAutomaton MasterSideShuffle()
 
 Ariadne::HybridAutomaton MasterSideReorder()
 {	
-	int n_locations = 3;
+	int n_locations = 4;
 	int n_events = 1;
 
 	Ariadne::RealVariable t("t");
@@ -707,25 +707,38 @@ Ariadne::HybridAutomaton MasterSideReorder()
 		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
 		{0,0,0,0,0,0,0,0});
 
+	aut.new_mode(loc[3], Ariadne::dot(
+		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+		{0,0,0,0,0,0,0,0});
+
 	// Save input packet in the buffer, not changing the output values
 	aut.new_transition(loc[0], clock_event, loc[1], 
+		Ariadne::next(
+			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}
+	);
+
+	aut.new_transition(loc[1], clock_event, loc[2], 
 		Ariadne::next(
 			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
 			{in_id, in_q, in_q_dot, in_H, p_s2m, v_s2m, H_s2m, id_s2m}
 	);
 	
-	aut.new_transition(loc[1], events[0], loc[2], 
+	// Butto in output quello che ho in input
+	aut.new_transition(loc[2], events[0], loc[3], 
 		Ariadne::next(
+			// {p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
+			// {in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
 			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
+			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id, },
 		(t > 0),
 		Ariadne::EventKind::PERMISSIVE
 	);
-
-	aut.new_transition(loc[2], clock_event, loc[0], 
+	
+	aut.new_transition(loc[3], clock_event, loc[1], 
 		Ariadne::next(
 			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id}
+			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id}
 	);
 
 	return aut;
@@ -806,7 +819,7 @@ Ariadne::HybridAutomaton SlaveSideShuffle()
 
 Ariadne::HybridAutomaton SlaveSideReorder()
 {
-	int n_locations = 3;
+	int n_locations = 4;
 	int n_events = 1;
 
 	Ariadne::RealVariable t("t");
@@ -854,28 +867,38 @@ Ariadne::HybridAutomaton SlaveSideReorder()
 		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
 		{0,0,0,0,0,0,0,0});
 
+	aut.new_mode(loc[3], Ariadne::dot(
+		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+		{0,0,0,0,0,0,0,0});
+
 	// Save input packet in the buffer, not changing the output values
 	aut.new_transition(loc[0], clock_event, loc[1], 
+		Ariadne::next(
+			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}
+	);
+
+	aut.new_transition(loc[1], clock_event, loc[2], 
 		Ariadne::next(
 			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
 			{in_id, in_q, in_q_dot, in_H, p_m2s, v_m2s, H_m2s, id_m2s}
 	);
 	
 	// Butto in output quello che ho in input
-	aut.new_transition(loc[1], events[0], loc[2], 
+	aut.new_transition(loc[2], events[0], loc[3], 
 		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
 			// {p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			// {p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id, },
+			// {in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
+			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
+			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id, },
 		(t > 0),
 		Ariadne::EventKind::PERMISSIVE
 	);
 	
-	aut.new_transition(loc[2], clock_event, loc[0], 
+	aut.new_transition(loc[3], clock_event, loc[1], 
 		Ariadne::next(
 			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id}
+			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id}
 	);
 
 	return aut;

@@ -210,4 +210,4 @@ app.layout = html.Div(children=[
     ])
 ], style={'textAlign': 'center'})
 
-app.run_server(host='192.168.42.13', port='25565', debug=True)
+app.run_server(host='localhost', debug=True)
