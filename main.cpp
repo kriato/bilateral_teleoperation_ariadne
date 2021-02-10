@@ -7,9 +7,9 @@
 #define PI Ariadne::pi
 
 // CHANGE THE DEFINE TO CHANGE THE TELEOPERATION INPUT
-#define SINE
-// #define STEP
-#define WORKING #for working branch
+// #define SINE
+#define STEP
+#define WORKING //for working branch
 
 #ifdef WORKING
 using Ariadne::Logger;
@@ -49,7 +49,7 @@ double Y_MIN, Y_MAX;
 double HMAX, HMIN, HD, ALPHA, BETA, H0;
 // LOG FILENAME
 std::string LOG_FILE;
-// LORENTZ 
+// LORENZ 
 double LOR_SIGMA, LOR_BETA, LOR_RHO;
 // FIXED PACKET-LOSS
 double START_LOSS, STOP_LOSS;
@@ -173,7 +173,7 @@ void load_settings()
 		print("ALPHA: " + std::to_string(ALPHA));
 		print("BETA: " + std::to_string(BETA));
 		print("H0: " + std::to_string(H0));
-		print("\nLORENTZ");
+		print("\nLORENZ");
 		print("LOR_SIGMA: " + std::to_string(LOR_SIGMA));
 		print("LOR_BETA: " + std::to_string(LOR_BETA));
 		print("LOR_RHO : " + std::to_string(LOR_RHO));
@@ -197,16 +197,15 @@ Ariadne::HybridAutomaton Clock()
 {
 	Ariadne::RealConstant ts("ts", Ariadne::Decimal(TS));
 	Ariadne::RealVariable counter("cnt");
-	Ariadne::RealVariable packet_counter("p_cnt");
 
 	Ariadne::HybridAutomaton clock("clock");
 	Ariadne::DiscreteLocation loc;
 
 	Ariadne::DiscreteEvent clock_event("clock_event");
 
-	clock.new_mode(loc, Ariadne::dot({counter, packet_counter}) = {1,0});
+	clock.new_mode(loc, Ariadne::dot({counter}) = {1});
 
-	clock.new_transition(clock_event, Ariadne::next({counter, packet_counter})={0, packet_counter + 1}, counter >= ts, Ariadne::EventKind::PERMISSIVE);
+	clock.new_transition(clock_event, Ariadne::next({counter})={0}, counter >= ts, Ariadne::EventKind::PERMISSIVE);
 
 	return clock;
 }
@@ -257,7 +256,7 @@ Ariadne::HybridAutomaton OneDelay()
 	return one_delay;
 }
 
-Ariadne::HybridAutomaton LorentzSystem()
+Ariadne::HybridAutomaton LorenzSystem()
 {
 	Ariadne::RealConstant sigma("lor_sigma", Ariadne::Decimal(LOR_SIGMA));
 	Ariadne::RealConstant beta("lor_beta", Ariadne::Decimal(LOR_BETA));
@@ -584,326 +583,6 @@ Ariadne::HybridAutomaton CommunicationChannel()
 	return comm;
 }
 
-Ariadne::HybridAutomaton MasterSideShuffle()
-{
-	int n_locations = 3;
-	int n_events = 1;
-
-	Ariadne::RealVariable t("t");
-
-	Ariadne::RealVariable p_d("qm_d");
-	Ariadne::RealVariable v_d("qm_dot_d");
-	Ariadne::RealVariable e_d("H-m");
-	Ariadne::RealVariable pck_cnt("p_cnt");
-
-	Ariadne::RealVariable p0_id("p0_ms_id");
-	Ariadne::RealVariable p0_q("p0_ms_qm");
-	Ariadne::RealVariable p0_q_dot("p0_ms_qm_dot");
-	Ariadne::RealVariable p0_H("p0_ms_Hm");
-
-	Ariadne::RealVariable out_id("m_out_id");
-	Ariadne::RealVariable out_q("m_out_qm");
-	Ariadne::RealVariable out_q_dot("m_out_qm_dot");
-	Ariadne::RealVariable out_H("m_out_Hm");
-
-	Ariadne::StringVariable aut_name("mss");
-	Ariadne::HybridAutomaton aut(aut_name.name());
-	Ariadne::DiscreteLocation loc[n_locations];
-	for (size_t i = 0; i < n_locations; i++)
-	{
-		loc[i] = Ariadne::DiscreteLocation(getPair(aut_name,"s" + std::to_string(i)));
-	}
-
-	Ariadne::DiscreteEvent events[n_events];
-	for (size_t i = 0; i < n_events; i++)
-	{
-		events[i] = Ariadne::DiscreteEvent("mss_t" + std::to_string(i));
-	}
-
-	Ariadne::DiscreteEvent clock_event("clock_event");
-
-	aut.new_mode(loc[0], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H, out_id}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[1], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H, out_id}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[2], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H, out_id}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_transition(loc[0], clock_event, loc[1], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H, out_id}) = 
-			{pck_cnt, p_d, v_d, e_d, out_q, out_q_dot, out_H, out_id}
-	);
-	
-	aut.new_transition(loc[1], events[0], loc[2], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H, out_id}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, p_d, v_d, e_d, pck_cnt},
-		(t > 0),
-		Ariadne::EventKind::PERMISSIVE
-	);
-	
-	aut.new_transition(loc[2], clock_event, loc[0], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H, out_id}) = 
-			{pck_cnt, p_d, v_d, e_d, p0_q, p0_q_dot, p0_H, p0_id}
-	);
-	
-	return aut;
-}
-
-Ariadne::HybridAutomaton MasterSideReorder()
-{	
-	int n_locations = 4;
-	int n_events = 1;
-
-	Ariadne::RealVariable t("t");
-
-	Ariadne::RealVariable in_id("s_out_id");
-	Ariadne::RealVariable in_q("s_out_qs");
-	Ariadne::RealVariable in_q_dot("s_out_qs_dot");
-	Ariadne::RealVariable in_H("s_out_Hs");
-
-	Ariadne::RealVariable p0_id("p0_mr_id");
-	Ariadne::RealVariable p0_q("p0_mr_qs");
-	Ariadne::RealVariable p0_q_dot("p0_mr_qs_dot");
-	Ariadne::RealVariable p0_H("p0_mr_Hs");
-
-	Ariadne::RealVariable id_s2m("id_s2m");
-	Ariadne::RealVariable p_s2m("qs_s2m");
-	Ariadne::RealVariable v_s2m("qs_dot_s2m");
-	Ariadne::RealVariable H_s2m("H+m");
-
-	Ariadne::StringVariable aut_name("msr");
-	Ariadne::HybridAutomaton aut(aut_name.name());
-	Ariadne::DiscreteLocation loc[n_locations];
-	for (size_t i = 0; i < n_locations; i++)
-	{
-		loc[i] = Ariadne::DiscreteLocation(getPair(aut_name,"s" + std::to_string(i)));
-	}
-
-	Ariadne::DiscreteEvent events[n_events];
-	for (size_t i = 0; i < n_events; i++)
-	{
-		events[i] = Ariadne::DiscreteEvent("msr_t" + std::to_string(i));
-	}
-
-	Ariadne::DiscreteEvent clock_event("clock_event");
-
-	aut.new_mode(loc[0], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[1], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[2], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[3], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-		{0,0,0,0,0,0,0,0});
-
-	// Save input packet in the buffer, not changing the output values
-	aut.new_transition(loc[0], clock_event, loc[1], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}
-	);
-
-	aut.new_transition(loc[1], clock_event, loc[2], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{in_id, in_q, in_q_dot, in_H, p_s2m, v_s2m, H_s2m, id_s2m}
-	);
-	
-	// Butto in output quello che ho in input
-	aut.new_transition(loc[2], events[0], loc[3], 
-		Ariadne::next(
-			// {p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			// {in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id, },
-		(t > 0),
-		Ariadne::EventKind::PERMISSIVE
-	);
-	
-	aut.new_transition(loc[3], clock_event, loc[1], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_s2m, v_s2m, H_s2m, id_s2m}) = 
-			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id}
-	);
-
-	return aut;
-}
-
-Ariadne::HybridAutomaton SlaveSideShuffle()
-{
-	int n_locations = 3;
-	int n_events = 1;
-
-	Ariadne::RealVariable t("t");
-
-	Ariadne::RealVariable p_d("qs_d");
-	Ariadne::RealVariable v_d("qs_dot_d");
-	Ariadne::RealVariable e_d("H-s");
-	Ariadne::RealVariable pck_cnt("p_cnt");
-
-	Ariadne::RealVariable p0_id("p0_ss_id");
-	Ariadne::RealVariable p0_q("p0_ss_qs");
-	Ariadne::RealVariable p0_q_dot("p0_ss_qs_dot");
-	Ariadne::RealVariable p0_H("p0_ss_Hs");
-
-	Ariadne::RealVariable out_id("s_out_id");
-	Ariadne::RealVariable out_q("s_out_qs");
-	Ariadne::RealVariable out_q_dot("s_out_qs_dot");
-	Ariadne::RealVariable out_H("s_out_Hs");
-
-	Ariadne::StringVariable aut_name("sss");
-	Ariadne::HybridAutomaton aut(aut_name.name());
-	Ariadne::DiscreteLocation loc[n_locations];
-	for (size_t i = 0; i < n_locations; i++)
-	{
-		loc[i] = Ariadne::DiscreteLocation(getPair(aut_name,"s" + std::to_string(i)));
-	}
-
-	Ariadne::DiscreteEvent events[n_events];
-	for (size_t i = 0; i < n_events; i++)
-	{
-		events[i] = Ariadne::DiscreteEvent("sss_t" + std::to_string(i));
-	}
-
-	Ariadne::DiscreteEvent clock_event("clock_event");
-
-	aut.new_mode(loc[0], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H,out_id}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[1], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H,out_id}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[2], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H,out_id}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_transition(loc[0], clock_event, loc[1], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H,out_id}) = 
-			{pck_cnt, p_d, v_d, e_d, out_q, out_q_dot, out_H,out_id}
-	);
-	
-	aut.new_transition(loc[1], events[0], loc[2], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H,out_id}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, p_d, v_d, e_d, pck_cnt},
-		(t > 0),
-		Ariadne::EventKind::PERMISSIVE
-	);
-	
-	aut.new_transition(loc[2], clock_event, loc[0], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, out_q, out_q_dot, out_H,out_id}) = 
-			{pck_cnt, p_d, v_d, e_d, p0_q, p0_q_dot, p0_H, p0_id}
-	);
-
-	return aut;
-}
-
-Ariadne::HybridAutomaton SlaveSideReorder()
-{
-	int n_locations = 4;
-	int n_events = 1;
-
-	Ariadne::RealVariable t("t");
-
-	Ariadne::RealVariable in_id("m_out_id");
-	Ariadne::RealVariable in_q("m_out_qm");
-	Ariadne::RealVariable in_q_dot("m_out_qm_dot");
-	Ariadne::RealVariable in_H("m_out_Hm");
-	
-	Ariadne::RealVariable p0_id("p0_sr_id");
-	Ariadne::RealVariable p0_q("p0_sr_qm");
-	Ariadne::RealVariable p0_q_dot("p0_sr_qm_dot");
-	Ariadne::RealVariable p0_H("p0_sr_Hm");
-
-	Ariadne::RealVariable id_m2s("id_m2s");
-	Ariadne::RealVariable p_m2s("qm_m2s");
-	Ariadne::RealVariable v_m2s("qm_dot_m2s");
-	Ariadne::RealVariable H_m2s("H+s");
-
-	Ariadne::StringVariable aut_name("ssr");
-	Ariadne::HybridAutomaton aut(aut_name.name());
-	Ariadne::DiscreteLocation loc[n_locations];
-	for (size_t i = 0; i < n_locations; i++)
-	{
-		loc[i] = Ariadne::DiscreteLocation(getPair(aut_name,"s" + std::to_string(i)));
-	}
-
-	Ariadne::DiscreteEvent events[n_events];
-	for (size_t i = 0; i < n_events; i++)
-	{
-		events[i] = Ariadne::DiscreteEvent("ssr_t" + std::to_string(i));
-	}
-
-	Ariadne::DiscreteEvent clock_event("clock_event");
-
-	aut.new_mode(loc[0], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[1], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[2], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-		{0,0,0,0,0,0,0,0});
-
-	aut.new_mode(loc[3], Ariadne::dot(
-		{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-		{0,0,0,0,0,0,0,0});
-
-	// Save input packet in the buffer, not changing the output values
-	aut.new_transition(loc[0], clock_event, loc[1], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}
-	);
-
-	aut.new_transition(loc[1], clock_event, loc[2], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{in_id, in_q, in_q_dot, in_H, p_m2s, v_m2s, H_m2s, id_m2s}
-	);
-	
-	// Butto in output quello che ho in input
-	aut.new_transition(loc[2], events[0], loc[3], 
-		Ariadne::next(
-			// {p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			// {in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id},
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{p0_id, p0_q, p0_q_dot, p0_H, in_q, in_q_dot, in_H, in_id, },
-		(t > 0),
-		Ariadne::EventKind::PERMISSIVE
-	);
-	
-	aut.new_transition(loc[3], clock_event, loc[1], 
-		Ariadne::next(
-			{p0_id, p0_q, p0_q_dot, p0_H, p_m2s, v_m2s, H_m2s, id_m2s}) = 
-			{in_id, in_q, in_q_dot, in_H, p0_q, p0_q_dot, p0_H, p0_id}
-	);
-
-	return aut;
-}
-
 Ariadne::HybridAutomaton Environment()
 {	
 	Ariadne::RealConstant position_env("qe", Ariadne::Decimal(QE));
@@ -951,9 +630,6 @@ Ariadne::HybridAutomaton TLM()
 	
 	tlm.new_mode(loc, Ariadne::let({torque}) = {(position_master - position_slave_s2m) * P + (velocity_master - velocity_slave_s2m) * D});
 
-	// tlm.new_mode(loc, Ariadne::dot({torque}) = {0});
-	// tlm.new_transition(loc, clock_event, loc, Ariadne::next({torque}) = {(position_master - position_slave_s2m) * P + (velocity_master - velocity_slave_s2m) * D});
-
 	return tlm;
 }
 
@@ -974,9 +650,6 @@ Ariadne::HybridAutomaton TLS()
 	Ariadne::DiscreteEvent clock_event("clock_event");
 
 	tls.new_mode(loc, Ariadne::let({torque}) = {(position_master_m2s - position_slave) * P + (velocity_master_m2s - velocity_slave) * D});
-
-	// tls.new_mode(loc, Ariadne::dot({torque}) = {0});
-	// tls.new_transition(loc, clock_event, loc, Ariadne::next({torque}) = {(position_master_m2s - position_slave) * P + (velocity_master_m2s - velocity_slave) * D});
 
 	return tls;
 }
@@ -1043,7 +716,6 @@ Ariadne::HybridAutomaton Operator()
 	Ariadne::HybridAutomaton operator_("human_operator");
 	Ariadne::DiscreteLocation loc;
 
-	// Discretized with clock event or continuous?
 	operator_.new_mode(loc, Ariadne::let({human_force}) = {(position_ref - position_slave_s2m) * P + (velocity_ref - velocity_slave_s2m) * D});
 
 	return operator_;
@@ -1166,39 +838,6 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 	Ariadne::RealVariable H_in_m("H+m");
 	Ariadne::RealVariable H_in_s("H+s");
 
-	// SHUFFLE - REORDER
-	Ariadne::RealVariable id_m2s("id_m2s");
-	Ariadne::RealVariable id_s2m("id_s2m");
-
-	Ariadne::RealVariable p0_ms_id("p0_ms_id");
-	Ariadne::RealVariable p0_ms_qm("p0_ms_qm");
-	Ariadne::RealVariable p0_ms_qm_dot("p0_ms_qm_dot");
-	Ariadne::RealVariable p0_ms_Hm("p0_ms_Hm");
-	
-	Ariadne::RealVariable p0_mr_id("p0_mr_id");
-	Ariadne::RealVariable p0_mr_qs("p0_mr_qs");
-	Ariadne::RealVariable p0_mr_qs_dot("p0_mr_qs_dot");
-	Ariadne::RealVariable p0_mr_Hs("p0_mr_Hs");
-
-	Ariadne::RealVariable p0_ss_id("p0_ss_id");
-	Ariadne::RealVariable p0_ss_qs("p0_ss_qs");
-	Ariadne::RealVariable p0_ss_qs_dot("p0_ss_qs_dot");
-	Ariadne::RealVariable p0_ss_Hs("p0_ss_Hs");
-
-	Ariadne::RealVariable p0_sr_id("p0_sr_id");
-	Ariadne::RealVariable p0_sr_qm("p0_sr_qm");
-	Ariadne::RealVariable p0_sr_qm_dot("p0_sr_qm_dot");
-	Ariadne::RealVariable p0_sr_Hm("p0_sr_Hm");
-
-	Ariadne::RealVariable m_out_id("m_out_id");
-	Ariadne::RealVariable m_out_qm("m_out_qm");
-	Ariadne::RealVariable m_out_qm_dot("m_out_qm_dot");
-	Ariadne::RealVariable m_out_Hm("m_out_Hm");
-	Ariadne::RealVariable s_out_id("s_out_id");
-	Ariadne::RealVariable s_out_qs("s_out_qs");
-	Ariadne::RealVariable s_out_qs_dot("s_out_qs_dot");
-	Ariadne::RealVariable s_out_Hs("s_out_Hs");
-
 	Ariadne::HybridSimulator simulator;
 	simulator.set_step_size(STEP_SIZE);
 
@@ -1212,11 +851,7 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			getPair("hi", "s0"),
 			getPair("pls","s0"),
 			getPair("plm","s0"),
-			getPair("cc", "s0"),
-			getPair("sss", "s0"),
-			getPair("ssr", "s0"),
-			getPair("mss", "s0"),
-			getPair("msr", "s0")
+			getPair("cc", "s0")
 		},
 		{
 			position_master = 0, 
@@ -1247,40 +882,12 @@ Ariadne::Void simulate_evolution(const Ariadne::CompositeHybridAutomaton& system
 			x_rand = 1,
 			y_rand = 1,
 			z_rand = 1,
-			
 			position_master_m2s = 0,
 			velocity_master_m2s = 0,
 			position_slave_s2m = 0,
 			velocity_slave_s2m = 0,
-			id_m2s = -1,
-			id_s2m = -1,
-
 			H_in_m = 0,
-			H_in_s = 0,
-			p0_ms_id = -1,
-			p0_ms_qm = 0,
-			p0_ms_qm_dot = 0,
-			p0_ms_Hm = 0,
-			p0_mr_id = -1,
-			p0_mr_qs = 0,
-			p0_mr_qs_dot = 0,
-			p0_mr_Hs = 0,
-			p0_ss_id = -1,
-			p0_ss_qs = 0,
-			p0_ss_qs_dot = 0,
-			p0_ss_Hs = 0,
-			p0_sr_id = -1,
-			p0_sr_qm = 0,
-			p0_sr_qm_dot = 0,
-			p0_sr_Hm = 0,
-			m_out_id = -1,
-			m_out_qm = 0,
-			m_out_qm_dot = 0,
-			m_out_Hm = 0,
-			s_out_id = -1,
-			s_out_qs = 0,
-			s_out_qs_dot = 0,
-			s_out_Hs = 0
+			H_in_s = 0
 
 		}
 	);
@@ -1365,13 +972,9 @@ Ariadne::Int main(Ariadne::Int argc, const char* argv[])
 		TLM(),
 		TLS(),
 		Environment(),
-		MasterSideShuffle(),
-		SlaveSideShuffle(),
-		MasterSideReorder(),
-		SlaveSideReorder(),
         // CommunicationChannelFixedPacketLoss(),
-		// CommunicationChannel(),
-		LorentzSystem(),
+		CommunicationChannel(),
+		LorenzSystem(),
 		Holder(),
 		Clock(),
 		Time(),

@@ -18,8 +18,8 @@ BhS: 0.02 #???
 JhS: 0.02 #???
 KT2CS: 1.182
 KC2VS: 2.0
-PS: 30
-DS: 1.5
+PS: 110
+DS: 12
 
 # MASTER
 ARM_M: 0.1
@@ -29,8 +29,8 @@ BhM: 0.02 #???
 JhM: 0.02 #???
 KT2CM: 1.182
 KC2VM: 2.0
-PM: 1
-DM: 1
+PM: 100
+DM: 10
 
 # SIMULATION
 TS: 0.005
@@ -53,7 +53,7 @@ ALPHA: 0.1
 BETA: 0.1
 H0: 0.6
 
-# LORENTZ
+# LORENZ
 LOR_SIGMA: 10.0
 LOR_BETA: 2.6667
 LOR_RHO: 28.0

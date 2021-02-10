@@ -76,7 +76,7 @@ print(values.shape)
 print(final_ordered_vars[0])
 
 # CHECK THE ORDER
-labels = ['H+m', 'H+s', 'H-m', 'H-s', 'Hm', 'Hs', 'cnt', 'deltaH_m', 'deltaH_s', 'fe', 'fe_d', 'h_m_star', 'id_m2s', 'id_s2m', 'm_out_Hm', 'm_out_id', 'm_out_qm', 'm_out_qm_dot', 'p0_mr_Hs', 'p0_mr_id', 'p0_mr_qs', 'p0_mr_qs_dot', 'p0_ms_Hm', 'p0_ms_id', 'p0_ms_qm', 'p0_ms_qm_dot', 'p0_sr_Hm', 'p0_sr_id', 'p0_sr_qm', 'p0_sr_qm_dot', 'p0_ss_Hs', 'p0_ss_id', 'p0_ss_qs', 'p0_ss_qs_dot', 'p_cnt', 'q_dot_ref', 'q_ref', 'qm', 'qm_d', 'qm_d_prev', 'qm_dot', 'qm_dot_d', 'qm_dot_m2s', 'qm_m2s', 'qs', 'qs_d', 'qs_d_prev', 'qs_dot', 'qs_dot_d', 'qs_dot_s2m', 'qs_s2m', 's_out_Hs', 's_out_id', 's_out_qs', 's_out_qs_dot', 't', 'tau_plm', 'tau_pls', 'tau_tlc', 'tau_tlm', 'tau_tls', 'x_rand', 'y_rand', 'z_rand']
+labels = ['H+m', 'H+s', 'H-m', 'H-s', 'Hm', 'Hs', 'cnt', 'deltaH_m', 'deltaH_s', 'fe', 'fe_d', 'h_m_star', 'q_dot_ref', 'q_ref', 'qm', 'qm_d', 'qm_d_prev', 'qm_dot', 'qm_dot_d', 'qm_dot_m2s', 'qm_m2s', 'qs', 'qs_d', 'qs_d_prev', 'qs_dot', 'qs_dot_d', 'qs_dot_s2m', 'qs_s2m', 't', 'tau_plm', 'tau_pls', 'tau_tlc', 'tau_tlm', 'tau_tls', 'x_rand', 'y_rand', 'z_rand']
 for var in final_ordered_vars:
     assert(var, labels)
 
@@ -91,17 +91,14 @@ mat = {}
 for val, label in zip(ordered_values.T, labels):
     mat[label]=val
 
-# sio.savemat('./build/bin/values.mat', mat)
+sio.savemat('./build/bin/values.mat', mat)
 
 import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
 df = pd.DataFrame(mat)
 
-id_df = pd.DataFrame(df[['p_cnt','p0_ms_id','m_out_id','p0_sr_id','id_m2s','p0_ss_id','s_out_id','p0_mr_id','id_s2m','qm_m2s','qs_s2m']])
-
 df.to_csv('testing_data.csv')
-id_df.to_csv('id_data.csv')
 
 # Compute threshold for packet loss
 lower = 0.9623
@@ -150,10 +147,10 @@ fig.add_trace(go.Scatter(x=df['t'], y=df['qm'], mode='lines', name='qm'))
 fig.add_trace(go.Scatter(x=df['t'], y=df['qs'], mode='lines', name='qs'))
 fig.add_trace(go.Scatter(x=df['t'], y=df['q_ref'], mode='lines', name='q_ref'))
 
-# fig.add_trace(go.Scatter(x=df['t'], y=vals_on, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(255, 0, 0, 0.3)'))
-# fig.add_trace(go.Scatter(x=df['t'], y=vals_off, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(0, 255, 0, 0.1)'))
-# fig.add_trace(go.Scatter(x=df['t'], y=vals_on_down, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(255, 0, 0, 0.3)'))
-# fig.add_trace(go.Scatter(x=df['t'], y=vals_off_down, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(0, 255, 0, 0.1)'))
+fig.add_trace(go.Scatter(x=df['t'], y=vals_on, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(255, 0, 0, 0.3)'))
+fig.add_trace(go.Scatter(x=df['t'], y=vals_off, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(0, 255, 0, 0.1)'))
+fig.add_trace(go.Scatter(x=df['t'], y=vals_on_down, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(255, 0, 0, 0.3)'))
+fig.add_trace(go.Scatter(x=df['t'], y=vals_off_down, fill='tozeroy', mode='none', hoverinfo='skip', fillcolor='rgba(0, 255, 0, 0.1)'))
 
 # fig = px.line(df, x='t',  y=['qm','qs','q_ref'])
 fig.update_layout(title = {
